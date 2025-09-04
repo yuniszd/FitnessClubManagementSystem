@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "eOO9qEl2DcnH5zFqcEW+v+ClSxOZ/zvac2gqVIPxMs0=",
+  "Source": "FCMS.WebApi",
+  "BasePath": "_content/FCMS.WebApi",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

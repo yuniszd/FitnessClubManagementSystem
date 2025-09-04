@@ -1,0 +1,16 @@
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\bin\Debug\net8.0\FCMS.Application.deps.json
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\bin\Debug\net8.0\FCMS.Application.dll
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\bin\Debug\net8.0\FCMS.Application.pdb
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\bin\Debug\net8.0\FCMS.Domain.dll
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\bin\Debug\net8.0\FCMS.Domain.pdb
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\obj\Debug\net8.0\FCMS.Application.csproj.AssemblyReference.cache
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\obj\Debug\net8.0\FCMS.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\obj\Debug\net8.0\FCMS.Application.AssemblyInfoInputs.cache
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\obj\Debug\net8.0\FCMS.Application.AssemblyInfo.cs
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\obj\Debug\net8.0\FCMS.Application.csproj.CoreCompileInputs.cache
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\obj\Debug\net8.0\FCMS.Application.sourcelink.json
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\obj\Debug\net8.0\FCMS.App.6C5F207A.Up2Date
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\obj\Debug\net8.0\FCMS.Application.dll
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\obj\Debug\net8.0\refint\FCMS.Application.dll
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\obj\Debug\net8.0\FCMS.Application.pdb
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Application\obj\Debug\net8.0\ref\FCMS.Application.dll
