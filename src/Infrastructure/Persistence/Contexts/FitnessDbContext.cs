@@ -3,13 +3,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace FCMS.Persistence.Contexts;
-
-    public class FitnessDbContext : IdentityDbContext<IdentityUser>
+namespace FCMS.Persistence.Contexts
+{
+    public class FitnessDbContext : IdentityDbContext<AppUser>
     {
         public FitnessDbContext(DbContextOptions<FitnessDbContext> options) : base(options) { }
 
-        // Müştəri və digər cədvəllər
         public DbSet<Member> Members { get; set; }
         public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
@@ -18,11 +17,9 @@ namespace FCMS.Persistence.Contexts;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // ⚠️ Əvvəl Identity üçün base çağırılmalıdır
             base.OnModelCreating(modelBuilder);
 
-            // Fluent API config-lərin avtomatik tətbiqi
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(FitnessDbContext).Assembly);
         }
     }
-
+}

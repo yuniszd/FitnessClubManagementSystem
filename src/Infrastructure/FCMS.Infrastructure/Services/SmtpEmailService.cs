@@ -1,36 +1,29 @@
 ﻿using System.Net.Mail;
 using System.Net;
 using FCMS.Application.Abstracts;
+using FCMS.Infrastructure.Settings;
+using Microsoft.Extensions.Options;
 
 namespace FCMS.Infrastructure.Services;
 
 public class SmtpEmailService : IEmailService
 {
-    private readonly SmtpClient _smtpClient;
-    private readonly string _fromEmail;
+    private readonly SmtpSettings _settings;
 
-    public SmtpEmailService(string host,
-                            int port,
-                            string fromEmail,
-                            string password)
+    public SmtpEmailService(IOptions<SmtpSettings> options)
     {
-        _fromEmail = fromEmail;
-        _smtpClient = new SmtpClient(host, port)
-        {
-            Credentials = new NetworkCredential(fromEmail, password),
-            EnableSsl = true
-        };
+        _settings = options.Value;
     }
 
     public async Task SendEmailAsync(string to, string subject, string body)
     {
-        if (string.IsNullOrWhiteSpace(to))
-            return;
-
-        var mail = new MailMessage(_fromEmail, to, subject, body)
+        using var client = new SmtpClient(_settings.Server, _settings.Port)
         {
-            IsBodyHtml = true
+            Credentials = new NetworkCredential(_settings.Username, _settings.Password),
+            EnableSsl = true
         };
-        await _smtpClient.SendMailAsync(mail);
+
+        var mail = new MailMessage(_settings.Username, to, subject, body);
+        await client.SendMailAsync(mail);
     }
 }

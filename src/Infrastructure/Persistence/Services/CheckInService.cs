@@ -22,14 +22,17 @@ public class CheckInService : ICheckInService
             .FirstOrDefaultAsync(m => m.CardNumber == cardNumber, cancellationToken);
 
         if (member == null)
-            throw new KeyNotFoundException($"Member with CardNumber {cardNumber} not found.");
+            throw new KeyNotFoundException("Belə kart nömrəsi ilə üzv tapılmadı.");
 
         var activeSubscription = member.Subscriptions
             .OrderByDescending(s => s.StartDate)
             .FirstOrDefault(s => s.IsActive);
 
         if (activeSubscription == null)
-            throw new InvalidOperationException("Member has no active subscription.");
+            throw new InvalidOperationException("Üzvün aktiv abonementi yoxdur.");
+
+        if (activeSubscription.AllowedVisits.HasValue && activeSubscription.UsedVisits >= activeSubscription.AllowedVisits.Value)
+            throw new InvalidOperationException("Bu abonement üçün icazə verilmiş ziyarət sayı bitib.");
 
         var log = new CheckInLog
         {
@@ -38,10 +41,7 @@ public class CheckInService : ICheckInService
         };
 
         await _context.CheckInLogs.AddAsync(log, cancellationToken);
-
-        if (activeSubscription.AllowedVisits.HasValue)
-            activeSubscription.UsedVisits++;
-
+        activeSubscription.UsedVisits++;
         await _context.SaveChangesAsync(cancellationToken);
 
         return new CheckInLogDto
@@ -58,10 +58,10 @@ public class CheckInService : ICheckInService
         var log = await _context.CheckInLogs.FindAsync(new object[] { logId }, cancellationToken);
 
         if (log == null)
-            throw new KeyNotFoundException($"CheckInLog with Id {logId} not found.");
+            throw new KeyNotFoundException("Belə check-in qeydi tapılmadı.");
 
         if (log.CheckOutTime != null)
-            throw new InvalidOperationException("This check-in already has a checkout time.");
+            throw new InvalidOperationException("Bu check-in artıq çıxış edib.");
 
         log.CheckOutTime = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
@@ -91,4 +91,3 @@ public class CheckInService : ICheckInService
         });
     }
 }
-

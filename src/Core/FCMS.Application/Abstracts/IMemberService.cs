@@ -11,4 +11,6 @@ public interface IMemberService
     Task<Member?> GetByIdAsync(Guid id);              // Id üzrə üzv tap
     Task<IEnumerable<Member>> GetAllAsync();          // Bütün üzvləri gətir
     Task<Member?> GetByCardAsync(string cardNumber);  // CardNumber üzrə üzv tap
+    Task<bool> ValidateQrAsync(string qrCode);
+
 }

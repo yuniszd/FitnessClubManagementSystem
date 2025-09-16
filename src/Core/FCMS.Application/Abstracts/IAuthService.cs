@@ -5,12 +5,17 @@ namespace FCMS.Application.Abstracts;
 public interface IAuthService
 {
     /// <summary>
-    /// Üzvü kart nömrəsinə əsasən login edir və cookie yaradır.
+    /// Admin / Reception istifadəçisi login olur, JWT + Refresh token qaytarılır
     /// </summary>
-    Task LoginWithCardAsync(string cardNumber);
+    /// <param name="username">İstifadəçi adı</param>
+    /// <param name="password">Parol</param>
+    /// <returns>Tuple: AccessToken və RefreshToken</returns>
+    Task<(string AccessToken, string RefreshToken)> LoginAsync(string username, string password);
 
     /// <summary>
-    /// Aktiv istifadəçini sistemdən çıxarır (cookie silinir).
+    /// Refresh token ilə yeni AccessToken və RefreshToken yaratmaq
     /// </summary>
-    Task LogoutAsync();
+    /// <param name="refreshToken">Əvvəlki refresh token</param>
+    /// <returns>Yeni AccessToken və RefreshToken</returns>
+    Task<(string AccessToken, string RefreshToken)> RefreshTokenAsync(string refreshToken);
 }

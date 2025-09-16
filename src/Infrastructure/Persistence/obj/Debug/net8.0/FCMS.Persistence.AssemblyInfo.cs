@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FCMS.Persistence")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2ef943ed71278f9dc08c8608aa881a561429a6b9")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+517a78f10c7ddb19e710e0a2bf440668e05e0688")]
 [assembly: System.Reflection.AssemblyProductAttribute("FCMS.Persistence")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FCMS.Persistence")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

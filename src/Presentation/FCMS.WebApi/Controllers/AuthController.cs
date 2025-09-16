@@ -1,8 +1,7 @@
-﻿// 📂 FCMS.API/Controllers/AuthController.cs
-
-using FCMS.Application.Abstracts;
-using Microsoft.AspNetCore.Authorization;
+﻿using FCMS.Application.Abstracts;
+using FCMS.Application.Responses;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace FCMS.API.Controllers;
 
@@ -17,30 +16,99 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
+    // DTO-lar
+    public class LoginRequest
+    {
+        [Required(ErrorMessage = "Username boş ola bilməz")]
+        public string Username { get; set; }
+
+        [Required(ErrorMessage = "Password boş ola bilməz")]
+        public string Password { get; set; }
+    }
+
+    public class RefreshTokenRequest
+    {
+        [Required(ErrorMessage = "RefreshToken boş ola bilməz")]
+        public string RefreshToken { get; set; }
+    }
+
     /// <summary>
-    /// Üzvü kart nömrəsi ilə sistemə daxil edir.
+    /// Admin / Reception istifadəçisini JWT ilə login edir
     /// </summary>
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        await _authService.LoginWithCardAsync(request.CardNumber);
-        return Ok(new { Message = "Login successful" });
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new BaseResponse<object>
+            {
+                Success = false,
+                Message = "Username və Password tələb olunur"
+            });
+        }
+
+        try
+        {
+            var tokens = await _authService.LoginAsync(request.Username, request.Password);
+
+            return Ok(new BaseResponse<object>
+            {
+                Success = true,
+                Message = "Login uğurlu oldu",
+                Data = new
+                {
+                    AccessToken = tokens.AccessToken,
+                    RefreshToken = tokens.RefreshToken
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return Unauthorized(new BaseResponse<object>
+            {
+                Success = false,
+                Message = ex.Message
+            });
+        }
     }
 
     /// <summary>
-    /// Aktiv istifadəçini çıxış etdirir.
+    /// Refresh token ilə yeni JWT access token və refresh token yaradır
     /// </summary>
-    [Authorize] // yalnız login olan istifadəçi çıxa bilər
-    [HttpPost("logout")]
-    public async Task<IActionResult> Logout()
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
     {
-        await _authService.LogoutAsync();
-        return Ok(new { Message = "Logout successful" });
-    }
-}
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new BaseResponse<object>
+            {
+                Success = false,
+                Message = "RefreshToken tələb olunur"
+            });
+        }
 
-// DTO (Request modeli)
-public class LoginRequest
-{
-    public string CardNumber { get; set; }
+        try
+        {
+            var tokens = await _authService.RefreshTokenAsync(request.RefreshToken);
+
+            return Ok(new BaseResponse<object>
+            {
+                Success = true,
+                Message = "Token yeniləndi",
+                Data = new
+                {
+                    AccessToken = tokens.AccessToken,
+                    RefreshToken = tokens.RefreshToken
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return Unauthorized(new BaseResponse<object>
+            {
+                Success = false,
+                Message = ex.Message
+            });
+        }
+    }
 }

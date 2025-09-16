@@ -7,8 +7,20 @@
       "RelativeMoniker": "D:0:0:{052E6ACC-F197-4A10-9CD2-ADC3FE1EF833}|src\\Presentation\\FCMS.WebApi\\FCMS.WebApi.csproj|solutionrelative:src\\presentation\\fcms.webapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{54EE1E12-4115-4EEC-B743-7161B143F314}|src\\Infrastructure\\Persistence\\FCMS.Persistence.csproj|c:\\users\\yunis\\source\\repos\\fitnesscentermanagementsystem\\src\\infrastructure\\persistence\\services\\qrcodeservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{54EE1E12-4115-4EEC-B743-7161B143F314}|src\\Infrastructure\\Persistence\\FCMS.Persistence.csproj|solutionrelative:src\\infrastructure\\persistence\\services\\qrcodeservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{54EE1E12-4115-4EEC-B743-7161B143F314}|src\\Infrastructure\\Persistence\\FCMS.Persistence.csproj|c:\\users\\yunis\\source\\repos\\fitnesscentermanagementsystem\\src\\infrastructure\\persistence\\services\\jwttokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{54EE1E12-4115-4EEC-B743-7161B143F314}|src\\Infrastructure\\Persistence\\FCMS.Persistence.csproj|solutionrelative:src\\infrastructure\\persistence\\services\\jwttokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{352C0494-9F4F-46ED-B644-82AF89E9AF9B}|src\\Core\\FCMS.Application\\FCMS.Application.csproj|c:\\users\\yunis\\source\\repos\\fitnesscentermanagementsystem\\src\\core\\fcms.application\\abstracts\\ijwttokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{352C0494-9F4F-46ED-B644-82AF89E9AF9B}|src\\Core\\FCMS.Application\\FCMS.Application.csproj|solutionrelative:src\\core\\fcms.application\\abstracts\\ijwttokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{54EE1E12-4115-4EEC-B743-7161B143F314}|src\\Infrastructure\\Persistence\\FCMS.Persistence.csproj|c:\\users\\yunis\\source\\repos\\fitnesscentermanagementsystem\\src\\infrastructure\\persistence\\configurations\\jwtsettings.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{54EE1E12-4115-4EEC-B743-7161B143F314}|src\\Infrastructure\\Persistence\\FCMS.Persistence.csproj|solutionrelative:src\\infrastructure\\persistence\\configurations\\jwtsettings.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{052E6ACC-F197-4A10-9CD2-ADC3FE1EF833}|src\\Presentation\\FCMS.WebApi\\FCMS.WebApi.csproj|c:\\users\\yunis\\source\\repos\\fitnesscentermanagementsystem\\src\\presentation\\fcms.webapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{052E6ACC-F197-4A10-9CD2-ADC3FE1EF833}|src\\Presentation\\FCMS.WebApi\\FCMS.WebApi.csproj|solutionrelative:src\\presentation\\fcms.webapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     }
   ],
   "DocumentGroupContainers": [
@@ -18,7 +30,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
@@ -26,28 +38,67 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Presentation\\FCMS.WebApi\\Program.cs",
-              "RelativeDocumentMoniker": "src\\Presentation\\FCMS.WebApi\\Program.cs",
-              "ToolTip": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Presentation\\FCMS.WebApi\\Program.cs",
-              "RelativeToolTip": "src\\Presentation\\FCMS.WebApi\\Program.cs",
-              "ViewState": "AgIAADAAAAAAAAAAAAAAADgAAAA8AAAAAAAAAA==",
+              "DocumentIndex": 3,
+              "Title": "JwtSettings.cs",
+              "DocumentMoniker": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Infrastructure\\Persistence\\Configurations\\JwtSettings.cs",
+              "RelativeDocumentMoniker": "src\\Infrastructure\\Persistence\\Configurations\\JwtSettings.cs",
+              "ToolTip": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Infrastructure\\Persistence\\Configurations\\JwtSettings.cs",
+              "RelativeToolTip": "src\\Infrastructure\\Persistence\\Configurations\\JwtSettings.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAoAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-03T13:01:56.266Z",
+              "WhenOpened": "2025-09-16T12:34:41.628Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "IJwtTokenService.cs",
+              "DocumentMoniker": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Core\\FCMS.Application\\Abstracts\\IJwtTokenService.cs",
+              "RelativeDocumentMoniker": "src\\Core\\FCMS.Application\\Abstracts\\IJwtTokenService.cs",
+              "ToolTip": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Core\\FCMS.Application\\Abstracts\\IJwtTokenService.cs",
+              "RelativeToolTip": "src\\Core\\FCMS.Application\\Abstracts\\IJwtTokenService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-16T12:26:34.542Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "QrCodeService.cs",
-              "DocumentMoniker": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Infrastructure\\Persistence\\Services\\QrCodeService.cs",
-              "RelativeDocumentMoniker": "src\\Infrastructure\\Persistence\\Services\\QrCodeService.cs",
-              "ToolTip": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Infrastructure\\Persistence\\Services\\QrCodeService.cs",
-              "RelativeToolTip": "src\\Infrastructure\\Persistence\\Services\\QrCodeService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAwAAAAAAAAAA==",
+              "Title": "JwtTokenService.cs",
+              "DocumentMoniker": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Infrastructure\\Persistence\\Services\\JwtTokenService.cs",
+              "RelativeDocumentMoniker": "src\\Infrastructure\\Persistence\\Services\\JwtTokenService.cs",
+              "ToolTip": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Infrastructure\\Persistence\\Services\\JwtTokenService.cs",
+              "RelativeToolTip": "src\\Infrastructure\\Persistence\\Services\\JwtTokenService.cs",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAAAAoAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-03T13:01:50.65Z",
+              "WhenOpened": "2025-09-16T12:25:36.912Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Presentation\\FCMS.WebApi\\appsettings.json",
+              "RelativeDocumentMoniker": "src\\Presentation\\FCMS.WebApi\\appsettings.json",
+              "ToolTip": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Presentation\\FCMS.WebApi\\appsettings.json",
+              "RelativeToolTip": "src\\Presentation\\FCMS.WebApi\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-09-16T12:22:43.808Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Presentation\\FCMS.WebApi\\Program.cs",
+              "RelativeDocumentMoniker": "src\\Presentation\\FCMS.WebApi\\Program.cs",
+              "ToolTip": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Presentation\\FCMS.WebApi\\Program.cs*",
+              "RelativeToolTip": "src\\Presentation\\FCMS.WebApi\\Program.cs*",
+              "ViewState": "AgIAAD0AAAAAAAAAAAAAAFsAAAA8AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-16T12:21:17.816Z",
               "EditorCaption": ""
             }
           ]
