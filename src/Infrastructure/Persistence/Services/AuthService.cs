@@ -1,4 +1,7 @@
-﻿using FCMS.Application.Abstracts;
+﻿// 📂 FCMS.Persistence/Services/AuthService.cs
+
+using FCMS.Application.Abstracts;
+using FCMS.Application.Responses;
 using FCMS.Domain.Entities;
 using FCMS.Persistence.Contexts;
 using Microsoft.AspNetCore.Identity;
@@ -26,7 +29,7 @@ public class AuthService : IAuthService
     }
 
     // Login üçün (Admin / Reception)
-    public async Task<(string AccessToken, string RefreshToken)> LoginAsync(string username, string password)
+    public async Task<TokenResponse> LoginAsync(string username, string password)
     {
         var user = await _userManager.FindByNameAsync(username);
         if (user == null || !await _userManager.CheckPasswordAsync(user, password))
@@ -39,11 +42,15 @@ public class AuthService : IAuthService
         user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(int.Parse(_config["Jwt:RefreshTokenExpirationDays"]));
         await _userManager.UpdateAsync(user);
 
-        return (accessToken, refreshToken);
+        return new TokenResponse
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken
+        };
     }
 
     // Refresh token ilə access token yeniləmə
-    public async Task<(string AccessToken, string RefreshToken)> RefreshTokenAsync(string refreshToken)
+    public async Task<TokenResponse> RefreshTokenAsync(string refreshToken)
     {
         var user = await _userManager.Users
             .SingleOrDefaultAsync(u => u.RefreshToken == refreshToken);
@@ -58,7 +65,11 @@ public class AuthService : IAuthService
         user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(int.Parse(_config["Jwt:RefreshTokenExpirationDays"]));
         await _userManager.UpdateAsync(user);
 
-        return (newAccessToken, newRefreshToken);
+        return new TokenResponse
+        {
+            AccessToken = newAccessToken,
+            RefreshToken = newRefreshToken
+        };
     }
 
     // Access token yaratmaq

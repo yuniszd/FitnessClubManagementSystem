@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FCMS.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+517a78f10c7ddb19e710e0a2bf440668e05e0688")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c6899c4f058376224533b5a879ad854060ee9c13")]
 [assembly: System.Reflection.AssemblyProductAttribute("FCMS.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FCMS.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -20,22 +20,25 @@ public class AuthController : ControllerBase
     public class LoginRequest
     {
         [Required(ErrorMessage = "Username boş ola bilməz")]
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Password boş ola bilməz")]
-        public string Password { get; set; }
+        public string Password { get; set; } = string.Empty;
     }
 
     public class RefreshTokenRequest
     {
         [Required(ErrorMessage = "RefreshToken boş ola bilməz")]
-        public string RefreshToken { get; set; }
+        public string RefreshToken { get; set; } = string.Empty;
     }
 
     /// <summary>
     /// Admin / Reception istifadəçisini JWT ilə login edir
     /// </summary>
     [HttpPost("login")]
+    [ProducesResponseType(typeof(BaseResponse<TokenResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         if (!ModelState.IsValid)
@@ -51,14 +54,15 @@ public class AuthController : ControllerBase
         {
             var tokens = await _authService.LoginAsync(request.Username, request.Password);
 
-            return Ok(new BaseResponse<object>
+            return Ok(new BaseResponse<TokenResponse>
             {
                 Success = true,
                 Message = "Login uğurlu oldu",
-                Data = new
+                Data = new TokenResponse
                 {
                     AccessToken = tokens.AccessToken,
-                    RefreshToken = tokens.RefreshToken
+                    RefreshToken = tokens.RefreshToken,
+                    Expiration = tokens.Expiration
                 }
             });
         }
@@ -76,6 +80,9 @@ public class AuthController : ControllerBase
     /// Refresh token ilə yeni JWT access token və refresh token yaradır
     /// </summary>
     [HttpPost("refresh-token")]
+    [ProducesResponseType(typeof(BaseResponse<TokenResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
     {
         if (!ModelState.IsValid)
@@ -91,14 +98,15 @@ public class AuthController : ControllerBase
         {
             var tokens = await _authService.RefreshTokenAsync(request.RefreshToken);
 
-            return Ok(new BaseResponse<object>
+            return Ok(new BaseResponse<TokenResponse>
             {
                 Success = true,
                 Message = "Token yeniləndi",
-                Data = new
+                Data = new TokenResponse
                 {
                     AccessToken = tokens.AccessToken,
-                    RefreshToken = tokens.RefreshToken
+                    RefreshToken = tokens.RefreshToken,
+                    Expiration = tokens.Expiration
                 }
             });
         }

@@ -3,34 +3,49 @@ using FCMS.Application.DTOs.CheckInDTOs;
 using FCMS.Application.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace FCMS.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Reception")] // yalnız reception istifadəçiləri
+[Authorize(Roles = "Reception")]
 public class CheckInController : ControllerBase
 {
     private readonly ICheckInService _checkInService;
+    private readonly ILogger<CheckInController> _logger;
 
-    public CheckInController(ICheckInService checkInService)
+    public CheckInController(ICheckInService checkInService, ILogger<CheckInController> logger)
     {
         _checkInService = checkInService;
+        _logger = logger;
+    }
+
+    // DTO for CheckIn
+    public class CheckInRequestDto
+    {
+        [Required(ErrorMessage = "Kart nömrəsi boş ola bilməz.")]
+        public string CardNumber { get; set; } = string.Empty;
     }
 
     [HttpPost("checkin")]
-    public async Task<IActionResult> CheckIn([FromQuery] string cardNumber)
+    [ProducesResponseType(typeof(BaseResponse<CheckInLogDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CheckIn([FromBody] CheckInRequestDto request)
     {
-        if (string.IsNullOrWhiteSpace(cardNumber))
+        if (!ModelState.IsValid)
+        {
+            var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
             return BadRequest(new BaseResponse<object>
             {
                 Success = false,
-                Message = "Kart nömrəsi boş ola bilməz."
+                Message = errors
             });
+        }
 
         try
         {
-            var log = await _checkInService.CheckInAsync(cardNumber);
+            var log = await _checkInService.CheckInAsync(request.CardNumber);
             return Ok(new BaseResponse<CheckInLogDto>
             {
                 Success = true,
@@ -40,6 +55,7 @@ public class CheckInController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "CheckIn zamanı xəta baş verdi. CardNumber: {CardNumber}", request.CardNumber);
             return BadRequest(new BaseResponse<object>
             {
                 Success = false,
@@ -49,6 +65,8 @@ public class CheckInController : ControllerBase
     }
 
     [HttpPost("checkout/{logId}")]
+    [ProducesResponseType(typeof(BaseResponse<CheckInLogDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CheckOut(Guid logId)
     {
         try
@@ -63,6 +81,7 @@ public class CheckInController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "CheckOut zamanı xəta baş verdi. LogId: {LogId}", logId);
             return BadRequest(new BaseResponse<object>
             {
                 Success = false,
@@ -72,6 +91,8 @@ public class CheckInController : ControllerBase
     }
 
     [HttpGet("member/{memberId}")]
+    [ProducesResponseType(typeof(BaseResponse<IEnumerable<CheckInLogDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetLogsByMember(Guid memberId)
     {
         try
@@ -86,6 +107,7 @@ public class CheckInController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "GetLogsByMember zamanı xəta baş verdi. MemberId: {MemberId}", memberId);
             return BadRequest(new BaseResponse<object>
             {
                 Success = false,

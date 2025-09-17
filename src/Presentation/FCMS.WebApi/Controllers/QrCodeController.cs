@@ -1,4 +1,5 @@
 ﻿using FCMS.Application.Abstracts;
+using FCMS.Application.Responses;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FCMS.API.Controllers
@@ -8,21 +9,44 @@ namespace FCMS.API.Controllers
     public class QrCodeController : ControllerBase
     {
         private readonly IQrCodeService _qrCodeService;
+        private readonly ILogger<QrCodeController> _logger;
 
-        public QrCodeController(IQrCodeService qrCodeService)
+        public QrCodeController(IQrCodeService qrCodeService, ILogger<QrCodeController> logger)
         {
             _qrCodeService = qrCodeService;
+            _logger = logger;
         }
 
         // GET: api/qrcode?content=ABC123
         [HttpGet]
-        public IActionResult Generate(string content)
+        [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
+        public IActionResult Generate([FromQuery] string content)
         {
             if (string.IsNullOrWhiteSpace(content))
-                return BadRequest("Content cannot be empty.");
+            {
+                return BadRequest(new BaseResponse<object>
+                {
+                    Success = false,
+                    Message = "Content boş ola bilməz."
+                });
+            }
 
-            var qrBytes = _qrCodeService.GenerateQrCode(content);
-            return File(qrBytes, "image/png");
+            try
+            {
+                var qrBytes = _qrCodeService.GenerateQrCode(content);
+                return File(qrBytes, "image/png");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "QR kod generasiya edərkən xəta baş verdi. Content: {Content}", content);
+                return StatusCode(500, new BaseResponse<object>
+                {
+                    Success = false,
+                    Message = "QR kod generasiya edilərkən xəta baş verdi: " + ex.Message
+                });
+            }
         }
     }
 }

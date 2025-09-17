@@ -15,6 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
 using FCMS.Persistence.Configurations;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Controllers + FluentValidation
