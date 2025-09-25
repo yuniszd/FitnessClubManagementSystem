@@ -5,14 +5,14 @@ namespace FCMS.Application.Extensions;
 
 public static class PaymentMappingExtensions
 {
-    // DTO → Entity
-    public static Payment ToEntity(this PaymentDto dto)
+    // CreateDto → Entity
+    public static Payment ToEntity(this PaymentCreateDto dto)
     {
         return new Payment
         {
-            Id = dto.Id,
+            Id = Guid.NewGuid(),
             Amount = dto.Amount,
-            PaidDate = dto.PaidDate,
+            PaidDate = DateTime.UtcNow,
             SubscriptionId = dto.SubscriptionId
         };
     }
@@ -27,5 +27,13 @@ public static class PaymentMappingExtensions
             PaidDate = payment.PaidDate,
             SubscriptionId = payment.SubscriptionId
         };
+    }
+
+    // DTO → Entity (Update zamanı istifadə oluna bilər)
+    public static void UpdateEntity(this Payment payment, PaymentDto dto)
+    {
+        payment.Amount = dto.Amount;
+        payment.PaidDate = dto.PaidDate;
+        payment.SubscriptionId = dto.SubscriptionId;
     }
 }

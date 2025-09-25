@@ -19,7 +19,8 @@ namespace FCMS.API.Controllers
 
         // GET: api/qrcode?content=ABC123
         [HttpGet]
-        [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+        [Produces("image/png")] // cavabın PNG olduğunu göstər
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
         public IActionResult Generate([FromQuery] string content)

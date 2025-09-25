@@ -199,6 +199,20 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
+          "dependencies": {
+            "MailKit": {
+              "target": "Package",
+              "version": "[4.13.0, )"
+            },
+            "MimeKit": {
+              "target": "Package",
+              "version": "[4.13.0, )"
+            },
+            "RabbitMQ.Client": {
+              "target": "Package",
+              "version": "[6.8.1, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -246,6 +260,9 @@
             "projectReferences": {
               "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Core\\FCMS.Application\\FCMS.Application.csproj": {
                 "projectPath": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Core\\FCMS.Application\\FCMS.Application.csproj"
+              },
+              "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Infrastructure\\FCMS.Infrastructure\\FCMS.Infrastructure.csproj": {
+                "projectPath": "C:\\Users\\Yunis\\source\\repos\\FitnessCenterManagementSystem\\src\\Infrastructure\\FCMS.Infrastructure\\FCMS.Infrastructure.csproj"
               }
             }
           }
@@ -366,6 +383,14 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "Hangfire": {
+              "target": "Package",
+              "version": "[1.8.21, )"
+            },
+            "Hangfire.SqlServer": {
+              "target": "Package",
+              "version": "[1.8.21, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[8.0.17, )"

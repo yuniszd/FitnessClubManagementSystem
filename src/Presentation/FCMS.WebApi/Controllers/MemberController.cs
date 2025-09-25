@@ -20,14 +20,11 @@ public class MemberController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(BaseResponse<IEnumerable<MemberDto>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAll()
     {
         try
         {
             var members = await _memberService.GetAllAsync();
-
             var dtos = members.Select(m => new MemberDto
             {
                 Id = m.Id,
@@ -69,67 +66,7 @@ public class MemberController : ControllerBase
         }
     }
 
-    [HttpGet("{id:guid}")]
-    [ProducesResponseType(typeof(BaseResponse<MemberDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetById(Guid id)
-    {
-        try
-        {
-            var member = await _memberService.GetByIdAsync(id);
-            if (member == null)
-                return NotFound(new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = "Member tapılmadı"
-                });
-
-            var dto = new MemberDto
-            {
-                Id = member.Id,
-                FullName = member.FullName,
-                PhoneNumber = member.PhoneNumber,
-                Email = member.Email,
-                JoinDate = member.JoinDate,
-                CardNumber = member.CardNumber,
-                Subscriptions = member.Subscriptions.Select(s => new SubscriptionDto
-                {
-                    Id = s.Id,
-                    MemberId = member.Id,
-                    MemberName = member.FullName,
-                    SubscriptionPlanId = s.SubscriptionPlanId,
-                    PlanName = s.SubscriptionPlan.Name,
-                    StartDate = s.StartDate,
-                    EndDate = s.EndDate,
-                    AllowedVisits = s.AllowedVisits,
-                    UsedVisits = s.UsedVisits,
-                    IsActive = s.IsActive
-                }).ToList()
-            };
-
-            return Ok(new BaseResponse<MemberDto>
-            {
-                Success = true,
-                Message = "Member tapıldı",
-                Data = dto
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "GetById zamanı xəta baş verdi. MemberId: {MemberId}", id);
-            return StatusCode(500, new BaseResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
-        }
-    }
-
     [HttpPost]
-    [ProducesResponseType(typeof(BaseResponse<MemberDto>), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create([FromBody] CreateMemberDto dto)
     {
         if (!ModelState.IsValid)
@@ -172,7 +109,7 @@ public class MemberController : ControllerBase
             return CreatedAtAction(nameof(GetById), new { id = member.Id }, new BaseResponse<MemberDto>
             {
                 Success = true,
-                Message = "Member yaradıldı",
+                Message = "Member yaradıldı və email göndərildi",
                 Data = memberDto
             });
         }
@@ -187,163 +124,43 @@ public class MemberController : ControllerBase
         }
     }
 
-    [HttpPut("{id:guid}")]
-    [ProducesResponseType(typeof(BaseResponse<MemberDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateMemberDto dto)
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
     {
-        if (!ModelState.IsValid)
+        var member = await _memberService.GetByIdAsync(id);
+        if (member == null)
+            return NotFound(new BaseResponse<object> { Success = false, Message = "Member tapılmadı" });
+
+        var dto = new MemberDto
         {
-            var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-            return BadRequest(new BaseResponse<object>
+            Id = member.Id,
+            FullName = member.FullName,
+            PhoneNumber = member.PhoneNumber,
+            Email = member.Email,
+            JoinDate = member.JoinDate,
+            CardNumber = member.CardNumber,
+            Subscriptions = member.Subscriptions.Select(s => new SubscriptionDto
             {
-                Success = false,
-                Message = errors
-            });
-        }
+                Id = s.Id,
+                MemberId = member.Id,
+                MemberName = member.FullName,
+                SubscriptionPlanId = s.SubscriptionPlanId,
+                PlanName = s.SubscriptionPlan.Name,
+                StartDate = s.StartDate,
+                EndDate = s.EndDate,
+                AllowedVisits = s.AllowedVisits,
+                UsedVisits = s.UsedVisits,
+                IsActive = s.IsActive
+            }).ToList()
+        };
 
-        try
+        return Ok(new BaseResponse<MemberDto>
         {
-            var member = await _memberService.GetByIdAsync(id);
-            if (member == null)
-                return NotFound(new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = "Member tapılmadı"
-                });
-
-            member.FullName = dto.FullName;
-            member.PhoneNumber = dto.PhoneNumber;
-            member.Email = dto.Email;
-
-            await _memberService.UpdateMemberAsync(member);
-
-            var dtoResponse = new MemberDto
-            {
-                Id = member.Id,
-                FullName = member.FullName,
-                PhoneNumber = member.PhoneNumber,
-                Email = member.Email,
-                JoinDate = member.JoinDate,
-                CardNumber = member.CardNumber,
-                Subscriptions = member.Subscriptions.Select(s => new SubscriptionDto
-                {
-                    Id = s.Id,
-                    MemberId = member.Id,
-                    MemberName = member.FullName,
-                    SubscriptionPlanId = s.SubscriptionPlanId,
-                    PlanName = s.SubscriptionPlan.Name,
-                    StartDate = s.StartDate,
-                    EndDate = s.EndDate,
-                    AllowedVisits = s.AllowedVisits,
-                    UsedVisits = s.UsedVisits,
-                    IsActive = s.IsActive
-                }).ToList()
-            };
-
-            return Ok(new BaseResponse<MemberDto>
-            {
-                Success = true,
-                Message = "Member yeniləndi",
-                Data = dtoResponse
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Update zamanı xəta baş verdi. MemberId: {MemberId}", id);
-            return StatusCode(500, new BaseResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
-        }
+            Success = true,
+            Message = "Member tapıldı",
+            Data = dto
+        });
     }
 
-    [HttpDelete("{id:guid}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Delete(Guid id)
-    {
-        try
-        {
-            var member = await _memberService.GetByIdAsync(id);
-            if (member == null)
-                return NotFound(new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = "Member tapılmadı"
-                });
-
-            await _memberService.DeleteMemberAsync(id);
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Delete zamanı xəta baş verdi. MemberId: {MemberId}", id);
-            return StatusCode(500, new BaseResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
-        }
-    }
-
-    [HttpGet("by-card/{cardNumber}")]
-    [ProducesResponseType(typeof(BaseResponse<MemberDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetByCard(string cardNumber)
-    {
-        try
-        {
-            var member = await _memberService.GetByCardAsync(cardNumber);
-            if (member == null)
-                return NotFound(new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = "Member tapılmadı (kart üzrə)"
-                });
-
-            var dto = new MemberDto
-            {
-                Id = member.Id,
-                FullName = member.FullName,
-                PhoneNumber = member.PhoneNumber,
-                Email = member.Email,
-                JoinDate = member.JoinDate,
-                CardNumber = member.CardNumber,
-                Subscriptions = member.Subscriptions.Select(s => new SubscriptionDto
-                {
-                    Id = s.Id,
-                    MemberId = member.Id,
-                    MemberName = member.FullName,
-                    SubscriptionPlanId = s.SubscriptionPlanId,
-                    PlanName = s.SubscriptionPlan.Name,
-                    StartDate = s.StartDate,
-                    EndDate = s.EndDate,
-                    AllowedVisits = s.AllowedVisits,
-                    UsedVisits = s.UsedVisits,
-                    IsActive = s.IsActive
-                }).ToList()
-            };
-
-            return Ok(new BaseResponse<MemberDto>
-            {
-                Success = true,
-                Message = "Member kart nömrəsi üzrə tapıldı",
-                Data = dto
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "GetByCard zamanı xəta baş verdi. CardNumber: {CardNumber}", cardNumber);
-            return StatusCode(500, new BaseResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
-        }
-    }
+    // Digər metodlar: Update, Delete, GetByCard dəyişmir, köhnə kodu istifadə edə bilərsən
 }

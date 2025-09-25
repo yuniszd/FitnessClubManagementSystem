@@ -1,6 +1,7 @@
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\bin\Debug\net8.0\FCMS.Domain.deps.json
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\bin\Debug\net8.0\FCMS.Domain.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\bin\Debug\net8.0\FCMS.Domain.pdb
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\obj\Debug\net8.0\FCMS.Domain.csproj.AssemblyReference.cache
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\obj\Debug\net8.0\FCMS.Domain.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\obj\Debug\net8.0\FCMS.Domain.AssemblyInfoInputs.cache
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\obj\Debug\net8.0\FCMS.Domain.AssemblyInfo.cs
@@ -10,4 +11,3 @@ C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\o
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\obj\Debug\net8.0\refint\FCMS.Domain.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\obj\Debug\net8.0\FCMS.Domain.pdb
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\obj\Debug\net8.0\ref\FCMS.Domain.dll
-C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Core\FCMS.Domain\obj\Debug\net8.0\FCMS.Domain.csproj.AssemblyReference.cache

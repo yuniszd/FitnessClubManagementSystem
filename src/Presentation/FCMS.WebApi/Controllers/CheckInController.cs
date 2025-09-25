@@ -21,16 +21,9 @@ public class CheckInController : ControllerBase
         _logger = logger;
     }
 
-    // DTO for CheckIn
-    public class CheckInRequestDto
-    {
-        [Required(ErrorMessage = "Kart nömrəsi boş ola bilməz.")]
-        public string CardNumber { get; set; } = string.Empty;
-    }
-
     [HttpPost("checkin")]
-    [ProducesResponseType(typeof(BaseResponse<CheckInLogDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<CheckInLogDto>), 200)]
+    [ProducesResponseType(typeof(BaseResponse<object>), 400)]
     public async Task<IActionResult> CheckIn([FromBody] CheckInRequestDto request)
     {
         if (!ModelState.IsValid)
@@ -45,7 +38,7 @@ public class CheckInController : ControllerBase
 
         try
         {
-            var log = await _checkInService.CheckInAsync(request.CardNumber);
+            var log = await _checkInService.CheckInAsync(request.CardNumber, request.DeviceId);
             return Ok(new BaseResponse<CheckInLogDto>
             {
                 Success = true,
@@ -56,17 +49,13 @@ public class CheckInController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "CheckIn zamanı xəta baş verdi. CardNumber: {CardNumber}", request.CardNumber);
-            return BadRequest(new BaseResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest(new BaseResponse<object> { Success = false, Message = ex.Message });
         }
     }
 
     [HttpPost("checkout/{logId}")]
-    [ProducesResponseType(typeof(BaseResponse<CheckInLogDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<CheckInLogDto>), 200)]
+    [ProducesResponseType(typeof(BaseResponse<object>), 400)]
     public async Task<IActionResult> CheckOut(Guid logId)
     {
         try
@@ -82,17 +71,13 @@ public class CheckInController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "CheckOut zamanı xəta baş verdi. LogId: {LogId}", logId);
-            return BadRequest(new BaseResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest(new BaseResponse<object> { Success = false, Message = ex.Message });
         }
     }
 
     [HttpGet("member/{memberId}")]
-    [ProducesResponseType(typeof(BaseResponse<IEnumerable<CheckInLogDto>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<IEnumerable<CheckInLogDto>>), 200)]
+    [ProducesResponseType(typeof(BaseResponse<object>), 400)]
     public async Task<IActionResult> GetLogsByMember(Guid memberId)
     {
         try
@@ -108,11 +93,7 @@ public class CheckInController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "GetLogsByMember zamanı xəta baş verdi. MemberId: {MemberId}", memberId);
-            return BadRequest(new BaseResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest(new BaseResponse<object> { Success = false, Message = ex.Message });
         }
     }
 }

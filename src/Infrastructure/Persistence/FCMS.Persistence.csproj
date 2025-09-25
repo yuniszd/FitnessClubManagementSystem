@@ -23,6 +23,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\FCMS.Application\FCMS.Application.csproj" />
+    <ProjectReference Include="..\FCMS.Infrastructure\FCMS.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Services\launchSettings.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -4,9 +4,18 @@ namespace FCMS.Application.Abstracts;
 
 public interface IPaymentService
 {
-    PaymentDto CreatePayment(PaymentDto dto);
-    PaymentDto GetPaymentById(Guid id);
+    // Yeni ödəniş yaratmaq
+    PaymentDto CreatePayment(PaymentCreateDto dto);
+
+    // ID ilə ödənişi götürmək
+    PaymentDto? GetPaymentById(Guid id);
+
+    // Bütün ödənişləri gətirmək
     IEnumerable<PaymentDto> GetAllPayments();
-    PaymentDto UpdatePayment(Guid id, PaymentDto dto);
+
+    // Ödənişi yeniləmək
+    PaymentDto? UpdatePayment(Guid id, PaymentDto dto);
+
+    // Ödənişi silmək
     bool DeletePayment(Guid id);
 }

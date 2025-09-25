@@ -16,7 +16,7 @@ public class PaymentService : IPaymentService
     }
 
     // Yeni ödəniş yaratmaq
-    public PaymentDto CreatePayment(PaymentDto dto)
+    public PaymentDto CreatePayment(PaymentCreateDto dto)
     {
         var payment = dto.ToEntity();
         _context.Payments.Add(payment);
@@ -25,11 +25,12 @@ public class PaymentService : IPaymentService
     }
 
     // ID ilə ödənişi götürmək
-    public PaymentDto GetPaymentById(Guid id)
+    public PaymentDto? GetPaymentById(Guid id)
     {
         var payment = _context.Payments
                               .AsNoTracking()
                               .FirstOrDefault(p => p.Id == id);
+
         return payment?.ToDto();
     }
 
@@ -43,16 +44,14 @@ public class PaymentService : IPaymentService
     }
 
     // Ödənişi yeniləmək
-    public PaymentDto UpdatePayment(Guid id, PaymentDto dto)
+    public PaymentDto? UpdatePayment(Guid id, PaymentDto dto)
     {
         var payment = _context.Payments.FirstOrDefault(p => p.Id == id);
         if (payment == null) return null;
 
-        payment.Amount = dto.Amount;
-        payment.PaidDate = dto.PaidDate;
-        payment.SubscriptionId = dto.SubscriptionId;
-
+        payment.UpdateEntity(dto);
         _context.SaveChanges();
+
         return payment.ToDto();
     }
 

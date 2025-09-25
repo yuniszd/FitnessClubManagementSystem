@@ -4,7 +4,9 @@ C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Infrastructure\Per
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Infrastructure\Persistence\bin\Debug\net8.0\FCMS.Persistence.pdb
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Infrastructure\Persistence\bin\Debug\net8.0\FCMS.Application.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Infrastructure\Persistence\bin\Debug\net8.0\FCMS.Domain.dll
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Infrastructure\Persistence\bin\Debug\net8.0\FCMS.Infrastructure.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Infrastructure\Persistence\bin\Debug\net8.0\FCMS.Application.pdb
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Infrastructure\Persistence\bin\Debug\net8.0\FCMS.Infrastructure.pdb
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Infrastructure\Persistence\bin\Debug\net8.0\FCMS.Domain.pdb
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Infrastructure\Persistence\obj\Debug\net8.0\FCMS.Persistence.csproj.AssemblyReference.cache
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Infrastructure\Persistence\obj\Debug\net8.0\FCMS.Persistence.GeneratedMSBuildEditorConfig.editorconfig

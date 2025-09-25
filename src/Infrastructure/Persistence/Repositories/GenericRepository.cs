@@ -16,6 +16,12 @@ namespace FCMS.Persistence.Services
             _dbSet = _context.Set<T>();
         }
 
+        // ✅ Yeni əlavə: IQueryable<T> qaytarır, Include istifadə etmək üçün
+        public IQueryable<T> GetQueryable()
+        {
+            return _dbSet.AsQueryable();
+        }
+
         public async Task<T> GetByIdAsync(Guid id)
         {
             var entity = await _dbSet.FindAsync(id);

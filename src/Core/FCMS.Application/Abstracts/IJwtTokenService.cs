@@ -1,4 +1,5 @@
-﻿using FCMS.Domain.Entities;
+﻿using FCMS.Application.Responses;
+using FCMS.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,6 @@ namespace FCMS.Application.Abstracts;
 
 public interface IJwtTokenService
 {
-    Task<string> GenerateAccessToken(AppUser user);
-    Task<(string token, DateTime expires)> GenerateRefreshToken(AppUser user);
+    Task<TokenResponse> GenerateTokensAsync(AppUser user);
 }
 

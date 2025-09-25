@@ -1,4 +1,5 @@
 ﻿using FCMS.Application.Abstracts;
+using FCMS.Application.Responses;
 using FCMS.Domain.Entities;
 using FCMS.Persistence.Configurations;
 using Microsoft.AspNetCore.Identity;
@@ -22,10 +23,13 @@ namespace FCMS.Persistence.Services
             _userManager = userManager;
         }
 
-        public async Task<string> GenerateAccessToken(AppUser user)
+        public async Task<TokenResponse> GenerateTokensAsync(AppUser user)
         {
+            // 🔹 Get roles
             var roles = await _userManager.GetRolesAsync(user);
+            var normalizedRoles = roles.Select(r => r.ToUpperInvariant()).ToList();
 
+            // 🔹 Build claims
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
@@ -33,35 +37,41 @@ namespace FCMS.Persistence.Services
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+            claims.AddRange(normalizedRoles.Select(r => new Claim(ClaimTypes.Role, r)));
+            claims.Add(new Claim("roles", string.Join(",", normalizedRoles)));
 
+            // 🔹 Create access token
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var accessTokenExpiration = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes);
 
             var token = new JwtSecurityToken(
                 issuer: _jwtSettings.Issuer,
                 audience: _jwtSettings.Audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes),
+                expires: accessTokenExpiration,
                 signingCredentials: creds
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
+            var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
 
-        public Task<(string token, DateTime expires)> GenerateRefreshToken(AppUser user)
-        {
+            // 🔹 Create refresh token
             var randomBytes = new byte[64];
             using var rng = RandomNumberGenerator.Create();
             rng.GetBytes(randomBytes);
-
             var refreshToken = Convert.ToBase64String(randomBytes);
-            var expires = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays);
+            var refreshTokenExpiration = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays);
 
+            // 🔹 Save refresh token to user
             user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = expires;
+            user.RefreshTokenExpiryTime = refreshTokenExpiration;
 
-            return Task.FromResult((refreshToken, expires));
+            return new TokenResponse
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                Expiration = accessTokenExpiration
+            };
         }
     }
 }

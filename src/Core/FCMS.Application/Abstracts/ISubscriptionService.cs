@@ -4,10 +4,16 @@ namespace FCMS.Application.Abstracts;
 
 public interface ISubscriptionService
 {
+    // ------------------- CRUD -------------------
     Task<SubscriptionDto> GetByIdAsync(Guid id);
     Task<IEnumerable<SubscriptionDto>> GetAllAsync();
-    Task<SubscriptionDto> CreateAsync(SubscriptionCreateDto dto);
+    Task<SubscriptionDto> CreateAsync(SubscriptionCreateDto dto, int? daysToAdd = null);
     Task<SubscriptionDto> UpdateAsync(Guid id, SubscriptionUpdateDto dto);
     Task<bool> DeleteAsync(Guid id);
-    Task<bool> IncrementVisitAsync(Guid id);  // hər gəlişdə UsedVisits artırmaq üçün
+
+    // ------------------- Increment Visits -------------------
+    Task<bool> IncrementVisitAsync(Guid id);
+
+    // ------------------- Renew Subscription -------------------
+    Task RenewSubscriptionAsync(Guid subscriptionId, decimal amountPaid, int? daysToAdd = null);
 }

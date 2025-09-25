@@ -1,45 +1,45 @@
-﻿using FCMS.Application.Abstracts;
+﻿using System.Security.Claims;
+using System.Text;
+using FCMS.Application.Abstracts;
 using FCMS.Application.Abstracts.Repositories;
 using FCMS.Application.DTOs.MemberDTOs;
+using FCMS.Application.Events;
 using FCMS.Domain.Entities;
+using FCMS.Infrastructure.Messaging;
 using FCMS.Infrastructure.Services;
 using FCMS.Infrastructure.Settings;
+using FCMS.Persistence.BackgroundJobs;
+using FCMS.Persistence.Configurations;
 using FCMS.Persistence.Contexts;
 using FCMS.Persistence.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using Microsoft.OpenApi.Models;
-using FCMS.Persistence.Configurations;
+using FCMS.Application.Validations.MemberValidations;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Controllers + FluentValidation
+// ------------------ Add Services ------------------
 builder.Services.AddControllers()
     .AddFluentValidation(config =>
-    {
-        config.RegisterValidatorsFromAssemblyContaining<CreateMemberDtoValidator>();
-    });
+        config.RegisterValidatorsFromAssemblyContaining<CreateMemberDtoValidator>());
 
-// DbContext
+// ------------------ DbContext ------------------
 builder.Services.AddDbContext<FitnessDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions =>
-        {
-            sqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 5,
-                maxRetryDelay: TimeSpan.FromSeconds(10),
-                errorNumbersToAdd: null
-            );
-        }
-    ));
+        sqlOptions => sqlOptions.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null)
+    )
+);
 
-// Identity (AppUser + Roles)
+// ------------------ Identity ------------------
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = false;
@@ -51,8 +51,10 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<FitnessDbContext>()
 .AddDefaultTokenProviders();
 
-// JWT Authentication
+// ------------------ JWT ------------------
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 var jwtSettings = builder.Configuration.GetSection("Jwt");
+
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
 
 builder.Services.AddAuthentication(options =>
@@ -62,68 +64,34 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    options.RequireHttpsMetadata = false; // Dev üçün
+    options.SaveToken = true;             // Token saxla
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
+
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(key)
+        IssuerSigningKey = new SymmetricSecurityKey(key),
 
-
+        RoleClaimType = ClaimTypes.Role,
+        ClockSkew = TimeSpan.Zero // vaxt fərqini sıfırla
     };
 });
 
-// Authorization
+
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 
-// Swagger
+// ------------------ Swagger ------------------
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// Repositories
-builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-
-// Services
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IQrCodeService, QrCodeService>();
-builder.Services.AddScoped<ICheckInService, CheckInService>();
-builder.Services.AddScoped<IPaymentService, PaymentService>();
-builder.Services.AddScoped<IMemberService, MemberService>();
-builder.Services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
-builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
-builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
-builder.Services.AddScoped<IEmailService, SmtpEmailService>();
-
-builder.Services.Configure<JwtSettings>(
-    builder.Configuration.GetSection("Jwt")
-);
-
-builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
-
-// Validators
-builder.Services.AddValidatorsFromAssemblyContaining<CreateMemberDtoValidator>();
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
-});
-
-
-
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Gym Management API", Version = "v1" });
 
-    // JWT Authentication
     var jwtSecurityScheme = new OpenApiSecurityScheme
     {
         Scheme = "bearer",
@@ -132,72 +100,146 @@ builder.Services.AddSwaggerGen(c =>
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
         Description = "JWT Authorization header using the Bearer scheme.",
-        Reference = new OpenApiReference
-        {
-            Id = "Bearer",
-            Type = ReferenceType.SecurityScheme
-        }
+        Reference = new OpenApiReference { Id = "Bearer", Type = ReferenceType.SecurityScheme }
     };
 
     c.AddSecurityDefinition(jwtSecurityScheme.Reference.Id, jwtSecurityScheme);
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        { jwtSecurityScheme, Array.Empty<string>() }
-    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement { { jwtSecurityScheme, Array.Empty<string>() } });
 });
 
+// ------------------ Repositories ------------------
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+
+// ------------------ Application Services ------------------
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICheckInService, CheckInService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IMemberService, MemberService>();
+builder.Services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<IQrCodeService, QrCodeService>();
+builder.Services.AddScoped<IEmailService, MailKitEmailService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+// ------------------ Background Jobs ------------------
+builder.Services.AddTransient<SubscriptionReminderJob>();
+
+// ------------------ RabbitMQ ------------------
+builder.Services.AddSingleton<IRabbitMqPublisher>(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<RabbitMqPublisher>>();
+    var host = builder.Configuration.GetValue<string>("RabbitMQ:Host");
+    return new RabbitMqPublisher(host, logger);
+});
+
+builder.Services.AddHostedService(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<RabbitMqConsumer<EmailMessage>>>();
+    var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+    var host = builder.Configuration.GetValue<string>("RabbitMQ:Host");
+    var queue = builder.Configuration.GetValue<string>("RabbitMQ:QueueName");
+
+    return new RabbitMqConsumer<EmailMessage>(host, queue, scopeFactory, logger);
+});
+
+builder.Services.AddHostedService(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<RabbitMqConsumer<CustomerRegisteredEvent>>>();
+    var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+    var host = builder.Configuration.GetValue<string>("RabbitMQ:Host");
+    var queue = "customer_registered_queue";
+
+    return new RabbitMqConsumer<CustomerRegisteredEvent>(host, queue, scopeFactory, logger);
+});
+
+// ------------------ CORS ------------------
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+});
+
+// ------------------ Hangfire ------------------
+builder.Services.AddHangfire(config =>
+    config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+          .UseSimpleAssemblyNameTypeSerializer()
+          .UseRecommendedSerializerSettings()
+          .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"), new SqlServerStorageOptions
+          {
+              CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+              SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+              QueuePollInterval = TimeSpan.Zero,
+              UseRecommendedIsolationLevel = true,
+              DisableGlobalLocks = true
+          }));
+builder.Services.AddHangfireServer();
 
 var app = builder.Build();
 
-// Automatic Role Creation (Admin / Reception)
-using (var scope = app.Services.CreateScope())
+// ------------------ Automatic Role & Admin Creation ------------------
+await CreateRolesAndAdminAsync(app);
+
+// ------------------ Hangfire Recurring Job ------------------
+await ConfigureRecurringJobsAsync(app);
+
+// ------------------ Middleware ------------------
+if (app.Environment.IsDevelopment())
 {
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Gym Management API V1"));
+}
+
+app.UseHangfireDashboard("/hangfire");
+app.UseCors("AllowAll");
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+app.Run();
+
+// ================== Helper Methods ==================
+async Task CreateRolesAndAdminAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
 
-    // Rolları yarat
+    // ------------------ Roles ------------------
     string[] roles = { "Admin", "Reception" };
     foreach (var role in roles)
     {
         if (!await roleManager.RoleExistsAsync(role))
-        {
             await roleManager.CreateAsync(new IdentityRole(role));
-        }
     }
 
-    // Admin user
+    // ------------------ Admin User ------------------
     var adminUser = await userManager.FindByNameAsync("admin");
     if (adminUser == null)
     {
-        adminUser = new AppUser
-        {
-            UserName = "admin",
-            Email = "admin@example.com"
-        };
-
-        // PasswordHash avtomatik yaradılacaq
+        adminUser = new AppUser { UserName = "admin", Email = "admin@example.com" };
         await userManager.CreateAsync(adminUser, "Admin123!");
-        await userManager.AddToRoleAsync(adminUser, "Admin");
-
         Console.WriteLine("Admin user yaradıldı: admin / Admin123!");
+    }
+
+    // ------------------ Ensure Admin Role ------------------
+    var userRoles = await userManager.GetRolesAsync(adminUser);
+    if (!userRoles.Contains("Admin"))
+    {
+        await userManager.AddToRoleAsync(adminUser, "Admin");
+        Console.WriteLine("Admin user-ə 'Admin' rolu əlavə olundu.");
     }
 }
 
 
-// Middleware
-if (app.Environment.IsDevelopment())
+async Task ConfigureRecurringJobsAsync(WebApplication app)
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Gym Management API V1");
-    });
+    using var scope = app.Services.CreateScope();
+    var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+    var subscriptionReminderJob = scope.ServiceProvider.GetRequiredService<SubscriptionReminderJob>();
+
+    recurringJobManager.AddOrUpdate(
+        "subscription-reminder-job",
+        () => subscriptionReminderJob.SendRemindersAsync(),
+        Cron.Daily
+    );
 }
-
-app.UseAuthentication();
-app.UseAuthorization();
-app.UseCors("AllowAll");
-app.MapControllers();
-
-app.Run();

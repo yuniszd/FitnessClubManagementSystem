@@ -108,6 +108,9 @@ namespace FCMS.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("DeviceId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid>("MemberId")
                         .HasColumnType("uniqueidentifier");
 
