@@ -13,15 +13,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastru
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Presentation", "Presentation", "{B3DECAB6-903F-4B98-A449-88D9BB0A7452}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCMS.Domain", "src\Core\FCMS.Domain\FCMS.Domain.csproj", "{6A21F735-EE2D-4564-B47E-E6BF23CEF85B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FCMS.Domain", "src\Core\FCMS.Domain\FCMS.Domain.csproj", "{6A21F735-EE2D-4564-B47E-E6BF23CEF85B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCMS.Application", "src\Core\FCMS.Application\FCMS.Application.csproj", "{352C0494-9F4F-46ED-B644-82AF89E9AF9B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FCMS.Application", "src\Core\FCMS.Application\FCMS.Application.csproj", "{352C0494-9F4F-46ED-B644-82AF89E9AF9B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCMS.Persistence", "src\Infrastructure\Persistence\FCMS.Persistence.csproj", "{54EE1E12-4115-4EEC-B743-7161B143F314}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FCMS.Persistence", "src\Infrastructure\Persistence\FCMS.Persistence.csproj", "{54EE1E12-4115-4EEC-B743-7161B143F314}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCMS.Infrastructure", "src\Infrastructure\FCMS.Infrastructure\FCMS.Infrastructure.csproj", "{7EE36F42-BB98-4276-8794-F218BB4F5AC6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FCMS.Infrastructure", "src\Infrastructure\FCMS.Infrastructure\FCMS.Infrastructure.csproj", "{7EE36F42-BB98-4276-8794-F218BB4F5AC6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCMS.WebApi", "src\Presentation\FCMS.WebApi\FCMS.WebApi.csproj", "{052E6ACC-F197-4A10-9CD2-ADC3FE1EF833}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FCMS.WebApi", "src\Presentation\FCMS.WebApi\FCMS.WebApi.csproj", "{052E6ACC-F197-4A10-9CD2-ADC3FE1EF833}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCMS.Tests", "tests\FCMS.Tests\FCMS.Tests\FCMS.Tests.csproj", "{227F3BBC-89EE-41A1-AF12-0A0DFF409037}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,6 +51,10 @@ Global
 		{052E6ACC-F197-4A10-9CD2-ADC3FE1EF833}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{052E6ACC-F197-4A10-9CD2-ADC3FE1EF833}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{052E6ACC-F197-4A10-9CD2-ADC3FE1EF833}.Release|Any CPU.Build.0 = Release|Any CPU
+		{227F3BBC-89EE-41A1-AF12-0A0DFF409037}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{227F3BBC-89EE-41A1-AF12-0A0DFF409037}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{227F3BBC-89EE-41A1-AF12-0A0DFF409037}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{227F3BBC-89EE-41A1-AF12-0A0DFF409037}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -62,6 +68,7 @@ Global
 		{54EE1E12-4115-4EEC-B743-7161B143F314} = {597BA6C5-CEFD-439B-BD59-30BDF91636A2}
 		{7EE36F42-BB98-4276-8794-F218BB4F5AC6} = {597BA6C5-CEFD-439B-BD59-30BDF91636A2}
 		{052E6ACC-F197-4A10-9CD2-ADC3FE1EF833} = {B3DECAB6-903F-4B98-A449-88D9BB0A7452}
+		{227F3BBC-89EE-41A1-AF12-0A0DFF409037} = {F280E3FE-9674-4CB7-ADB9-B008F514229A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C2E58C0C-E5AE-43EF-B608-ECCB8D8EBAEE}
