@@ -3,6 +3,7 @@ using FCMS.Application.Abstracts.Repositories;
 using FCMS.Application.DTOs.SubscriptionDTOs;
 using FCMS.Domain.Entities;
 using FCMS.Infrastructure.Messaging;
+using FCMS.Persistence.Services;
 using Moq;
 
 namespace FCMS.Tests.Services;

@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FCMS.WebApi.Controllers;
 
-[Authorize(Roles = "Reception")]
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Reception")]
 public class ReceptionController : ControllerBase
 {
     private readonly IMemberService _memberService;
@@ -28,41 +28,29 @@ public class ReceptionController : ControllerBase
     public async Task<IActionResult> ScanMember([FromBody] QrScanDto dto)
     {
         if (dto == null || string.IsNullOrWhiteSpace(dto.QrCode))
-        {
-            return BadRequest(new BaseResponse<object>
-            {
-                Success = false,
-                Message = "QR kod boş ola bilməz."
-            });
-        }
+            return BadRequest(FailResponse("QR kod boş ola bilməz."));
 
         try
         {
             var isValid = await _memberService.ValidateQrAsync(dto.QrCode);
 
             if (!isValid)
-            {
-                return Unauthorized(new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = "Üzvlük etibarsızdır və ya müddəti bitib."
-                });
-            }
+                return Unauthorized(FailResponse("Üzvlük etibarsızdır və ya müddəti bitib."));
 
-            return Ok(new BaseResponse<object>
-            {
-                Success = true,
-                Message = "Üzv qəbul edildi ✅"
-            });
+            return Ok(SuccessResponse<object?>(null, "Üzv qəbul edildi ✅"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "ScanMember zamanı xəta baş verdi. QR: {QrCode}", dto.QrCode);
-            return StatusCode(500, new BaseResponse<object>
-            {
-                Success = false,
-                Message = "Üzv skan edilərkən xəta baş verdi: " + ex.Message
-            });
+            return StatusCode(500, FailResponse("Üzv skan edilərkən xəta baş verdi: " + ex.Message));
         }
     }
+
+    #region Response Helpers
+    private static BaseResponse<T?> SuccessResponse<T>(T? data, string message) =>
+        new() { Success = true, Message = message, Data = data };
+
+    private static BaseResponse<object> FailResponse(string message) =>
+        new() { Success = false, Message = message };
+    #endregion
 }

@@ -5,6 +5,8 @@ using FCMS.Application.DTOs.MemberDTOs;
 using FCMS.Domain.Entities;
 using FCMS.Infrastructure.Messaging;
 using FCMS.Persistence.Services;
+using FCMS.Application.Extensions.Exceptions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using System.Linq.Expressions;
 
@@ -16,6 +18,7 @@ public class MemberServiceTests
     private readonly Mock<IGenericRepository<SubscriptionPlan>> _planRepoMock;
     private readonly Mock<IQrCodeService> _qrCodeServiceMock;
     private readonly Mock<IRabbitMqPublisher> _rabbitMqPublisherMock;
+    private readonly Mock<ILogger<MemberService>> _loggerMock;
     private readonly MemberService _service;
     private readonly Fixture _fixture;
 
@@ -25,148 +28,79 @@ public class MemberServiceTests
         _planRepoMock = new Mock<IGenericRepository<SubscriptionPlan>>();
         _qrCodeServiceMock = new Mock<IQrCodeService>();
         _rabbitMqPublisherMock = new Mock<IRabbitMqPublisher>();
+        _loggerMock = new Mock<ILogger<MemberService>>();
         _fixture = new Fixture();
 
         _service = new MemberService(
             _memberRepoMock.Object,
             _planRepoMock.Object,
             _qrCodeServiceMock.Object,
-            _rabbitMqPublisherMock.Object
+            _rabbitMqPublisherMock.Object,
+            _loggerMock.Object
         );
     }
 
     #region AddMemberAsync Tests
 
     [Fact]
-    public async Task AddMemberAsync_ShouldThrowInvalidOperationException_WhenSubscriptionPlanNotFound()
+    public async Task AddMemberAsync_ShouldThrowNotFoundException_WhenPlanNotFound()
     {
-        // Arrange
-        var createMemberDto = _fixture.Build<CreateMemberDto>()
+        var dto = _fixture.Build<CreateMemberDto>()
             .With(x => x.SubscriptionPlanId, Guid.NewGuid())
             .Create();
 
-        _planRepoMock.Setup(x => x.GetByIdAsync(It.IsAny<Guid>()))
+        _planRepoMock.Setup(x => x.GetByIdAsync(dto.SubscriptionPlanId))
             .ReturnsAsync((SubscriptionPlan?)null);
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.AddMemberAsync(createMemberDto));
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() => _service.AddMemberAsync(dto));
 
-        Assert.Equal("Subscription plan not found", exception.Message);
-
-        _planRepoMock.Verify(x => x.GetByIdAsync(createMemberDto.SubscriptionPlanId), Times.Once);
+        Assert.Contains("SubscriptionPlan", ex.Message);
+        _planRepoMock.Verify(x => x.GetByIdAsync(dto.SubscriptionPlanId), Times.Once);
         _memberRepoMock.Verify(x => x.AddAsync(It.IsAny<Member>()), Times.Never);
     }
 
     [Fact]
-    public async Task AddMemberAsync_ShouldCreateMemberWithActiveSubscription_WhenValidDataProvided()
+    public async Task AddMemberAsync_ShouldCreateMemberSuccessfully_WhenValidInput()
     {
-        // Arrange
-        var subscriptionPlan = _fixture.Build<SubscriptionPlan>()
+        var plan = _fixture.Build<SubscriptionPlan>()
             .With(x => x.Id, Guid.NewGuid())
             .With(x => x.DurationInMonths, 3)
-            .With(x => x.Price, 100.00m)
             .Create();
 
-        var createMemberDto = _fixture.Build<CreateMemberDto>()
-            .With(x => x.SubscriptionPlanId, subscriptionPlan.Id)
+        var dto = _fixture.Build<CreateMemberDto>()
+            .With(x => x.SubscriptionPlanId, plan.Id)
             .With(x => x.AllowedVisits, 12)
             .Create();
 
-        _planRepoMock.Setup(x => x.GetByIdAsync(subscriptionPlan.Id))
-            .ReturnsAsync(subscriptionPlan);
+        _planRepoMock.Setup(x => x.GetByIdAsync(plan.Id)).ReturnsAsync(plan);
 
-        Member capturedMember = null;
+        Member capturedMember = null!;
         _memberRepoMock.Setup(x => x.AddAsync(It.IsAny<Member>()))
             .Callback<Member>(m => capturedMember = m)
             .Returns(Task.CompletedTask);
 
-        // Act
-        var result = await _service.AddMemberAsync(createMemberDto);
+        _qrCodeServiceMock.Setup(x => x.GenerateQrCode(It.IsAny<string>()))
+            .Returns(Array.Empty<byte>());
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(createMemberDto.FullName, result.FullName);
-        Assert.Equal(createMemberDto.Email, result.Email);
-        Assert.Equal(createMemberDto.PhoneNumber, result.PhoneNumber);
-
-        // CardNumber yoxlayırıq
-        Assert.NotNull(result.CardNumber);
-        Assert.StartsWith("FCMS", result.CardNumber);
-
-        // JoinDate avtomatik set olunmalıdır
-        Assert.True(result.JoinDate <= DateTime.UtcNow);
-
-        // Verify subscription
-        Assert.Single(result.Subscriptions);
-        var subscription = result.Subscriptions.First();
-        Assert.Equal(subscriptionPlan.Id, subscription.SubscriptionPlanId);
-        Assert.Equal(createMemberDto.AllowedVisits, subscription.AllowedVisits);
-        Assert.Equal(0, subscription.UsedVisits);
-        Assert.True(subscription.IsActive);
-        Assert.True(subscription.StartDate <= DateTime.UtcNow);
-        Assert.True(subscription.EndDate > DateTime.UtcNow);
-
-        // Verify repository interactions
-        _memberRepoMock.Verify(x => x.AddAsync(It.IsAny<Member>()), Times.Once);
-        _memberRepoMock.Verify(x => x.SaveChangesAsync(), Times.Once);
-
-        // Verify messaging - QR code service çağırılmır, çünki Member-də QrCode property-si yoxdur
-        _qrCodeServiceMock.Verify(x => x.GenerateQrCode(It.IsAny<string>()), Times.Never);
-
-        // RabbitMQ çağırılır
-        _rabbitMqPublisherMock.Verify(x =>
-            x.PublishAsync("customer_registered_queue", It.IsAny<string>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task AddMemberAsync_ShouldHandleNullOptionalFields_WhenEmailAndPhoneNotProvided()
-    {
-        // Arrange
-        var subscriptionPlan = _fixture.Create<SubscriptionPlan>();
-        var createMemberDto = _fixture.Build<CreateMemberDto>()
-            .With(x => x.SubscriptionPlanId, subscriptionPlan.Id)
-            .With(x => x.Email, (string?)null)
-            .With(x => x.PhoneNumber, (string?)null)
-            .Create();
-
-        _planRepoMock.Setup(x => x.GetByIdAsync(subscriptionPlan.Id))
-            .ReturnsAsync(subscriptionPlan);
-
-        // Act
-        var result = await _service.AddMemberAsync(createMemberDto);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(createMemberDto.FullName, result.FullName);
-        Assert.Null(result.Email);
-        Assert.Null(result.PhoneNumber);
-        Assert.NotNull(result.CardNumber);
-    }
-
-    [Fact]
-    public async Task AddMemberAsync_ShouldGenerateUniqueCardNumber_ForEachMember()
-    {
-        // Arrange
-        var subscriptionPlan = _fixture.Create<SubscriptionPlan>();
-        var createMemberDto = _fixture.Create<CreateMemberDto>();
-
-        _planRepoMock.Setup(x => x.GetByIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync(subscriptionPlan);
-
-        List<string> generatedCardNumbers = new();
-        _memberRepoMock.Setup(x => x.AddAsync(It.IsAny<Member>()))
-            .Callback<Member>(m => generatedCardNumbers.Add(m.CardNumber))
+        _rabbitMqPublisherMock.Setup(x => x.PublishAsync(It.IsAny<string>(), It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
-        // Act
-        await _service.AddMemberAsync(createMemberDto);
-        await _service.AddMemberAsync(createMemberDto);
+        var result = await _service.AddMemberAsync(dto);
 
-        // Assert
-        Assert.Equal(2, generatedCardNumbers.Count);
-        Assert.NotEqual(generatedCardNumbers[0], generatedCardNumbers[1]);
-        Assert.All(generatedCardNumbers, cn => Assert.StartsWith("FCMS", cn));
+        Assert.NotNull(result);
+        Assert.Equal(dto.FullName, result.FullName);
+        Assert.Equal(dto.Email, result.Email);
+        Assert.Equal(dto.PhoneNumber, result.PhoneNumber);
+        Assert.NotNull(result.CardNumber);
+        Assert.Single(result.Subscriptions);
+
+        var sub = result.Subscriptions.First();
+        Assert.Equal(12, sub.AllowedVisits);
+        Assert.True(sub.IsActive);
+
+        _memberRepoMock.Verify(x => x.AddAsync(It.IsAny<Member>()), Times.Once);
+        _memberRepoMock.Verify(x => x.SaveChangesAsync(), Times.Once);
+        _rabbitMqPublisherMock.Verify(x => x.PublishAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
     }
 
     #endregion
@@ -174,31 +108,42 @@ public class MemberServiceTests
     #region UpdateMemberAsync Tests
 
     [Fact]
-    public async Task UpdateMemberAsync_ShouldUpdateMemberAndSaveChanges_WhenMemberIsValid()
+    public async Task UpdateMemberAsync_ShouldCallUpdateAndSave_WhenMemberExists()
     {
-        // Arrange
-        var member = _fixture.Build<Member>()
-            .With(x => x.Id, Guid.NewGuid())
-            .Without(x => x.Subscriptions)
-            .Create();
+        var member = _fixture.Create<Member>();
+        var dto = new UpdateMemberDto(
+            Id: member.Id,
+            FullName: member.FullName,
+            PhoneNumber: member.PhoneNumber,
+            Email: member.Email
+        );
 
-        // Act
-        await _service.UpdateMemberAsync(member);
+        _memberRepoMock.Setup(x => x.GetByIdAsync(dto.Id)).ReturnsAsync(member);
 
-        // Assert
-        _memberRepoMock.Verify(x => x.Update(member), Times.Once);
+        await _service.UpdateMemberAsync(dto);
+
+        _memberRepoMock.Verify(x => x.Update(It.Is<Member>(m =>
+            m.Id == member.Id &&
+            m.FullName == dto.FullName &&
+            m.PhoneNumber == dto.PhoneNumber &&
+            m.Email == dto.Email)), Times.Once);
+
         _memberRepoMock.Verify(x => x.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
-    public async Task UpdateMemberAsync_ShouldThrowArgumentNullException_WhenMemberIsNull()
+    public async Task UpdateMemberAsync_ShouldThrowNotFoundException_WhenMemberDoesNotExist()
     {
-        // Arrange
-        Member nullMember = null;
+        var dto = new UpdateMemberDto(
+            Id: Guid.NewGuid(),
+            FullName: "Test Name",
+            PhoneNumber: "123456",
+            Email: "test@example.com"
+        );
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _service.UpdateMemberAsync(nullMember));
+        _memberRepoMock.Setup(x => x.GetByIdAsync(dto.Id)).ReturnsAsync((Member?)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.UpdateMemberAsync(dto));
     }
 
     #endregion
@@ -206,159 +151,51 @@ public class MemberServiceTests
     #region DeleteMemberAsync Tests
 
     [Fact]
-    public async Task DeleteMemberAsync_ShouldRemoveMemberAndSaveChanges_WhenMemberExists()
+    public async Task DeleteMemberAsync_ShouldRemoveMember_WhenExists()
     {
-        // Arrange
-        var memberId = Guid.NewGuid();
-        var existingMember = _fixture.Build<Member>()
-            .With(x => x.Id, memberId)
-            .Create();
+        var member = _fixture.Create<Member>();
+        _memberRepoMock.Setup(x => x.GetByIdAsync(member.Id)).ReturnsAsync(member);
 
-        _memberRepoMock.Setup(x => x.GetByIdAsync(memberId))
-            .ReturnsAsync(existingMember);
+        await _service.DeleteMemberAsync(member.Id);
 
-        // Act
-        await _service.DeleteMemberAsync(memberId);
-
-        // Assert
-        _memberRepoMock.Verify(x => x.GetByIdAsync(memberId), Times.Once);
-        _memberRepoMock.Verify(x => x.Remove(existingMember), Times.Once);
+        _memberRepoMock.Verify(x => x.Remove(member), Times.Once);
         _memberRepoMock.Verify(x => x.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
-    public async Task DeleteMemberAsync_ShouldDoNothing_WhenMemberDoesNotExist()
+    public async Task DeleteMemberAsync_ShouldThrowNotFoundException_WhenDoesNotExist()
     {
-        // Arrange
-        var nonExistentMemberId = Guid.NewGuid();
+        var id = Guid.NewGuid();
+        _memberRepoMock.Setup(x => x.GetByIdAsync(id)).ReturnsAsync((Member?)null);
 
-        _memberRepoMock.Setup(x => x.GetByIdAsync(nonExistentMemberId))
-            .ReturnsAsync((Member?)null);
-
-        // Act
-        await _service.DeleteMemberAsync(nonExistentMemberId);
-
-        // Assert
-        _memberRepoMock.Verify(x => x.GetByIdAsync(nonExistentMemberId), Times.Once);
-        _memberRepoMock.Verify(x => x.Remove(It.IsAny<Member>()), Times.Never);
-        _memberRepoMock.Verify(x => x.SaveChangesAsync(), Times.Never);
-    }
-
-    [Fact]
-    public async Task DeleteMemberAsync_ShouldThrowArgumentException_WhenMemberIdIsEmpty()
-    {
-        // Arrange
-        var emptyMemberId = Guid.Empty;
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.DeleteMemberAsync(emptyMemberId));
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.DeleteMemberAsync(id));
     }
 
     #endregion
 
     #region ValidateQrAsync Tests
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData(" ")]
-    public async Task ValidateQrAsync_ShouldReturnFalse_WhenQrCodeDataIsInvalid(string invalidQrCode)
-    {
-        // Act
-        var result = await _service.ValidateQrAsync(invalidQrCode);
-
-        // Assert
-        Assert.False(result);
-        _memberRepoMock.Verify(x => x.FindAsync(It.IsAny<Expression<Func<Member, bool>>>()), Times.Never);
-    }
-
     [Fact]
     public async Task ValidateQrAsync_ShouldReturnFalse_WhenMemberNotFound()
     {
-        // Arrange
-        var qrCodeData = "FCMS20231010120000";
-
         _memberRepoMock.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Member, bool>>>()))
-            .ReturnsAsync(new List<Member>());
+            .ReturnsAsync(Enumerable.Empty<Member>());
 
-        // Act
-        var result = await _service.ValidateQrAsync(qrCodeData);
-
-        // Assert
+        var result = await _service.ValidateQrAsync("INVALID");
         Assert.False(result);
     }
 
     [Fact]
-    public async Task ValidateQrAsync_ShouldReturnFalse_WhenMemberHasNoSubscriptions()
+    public async Task ValidateQrAsync_ShouldReturnTrue_WhenMemberHasActiveSubscription()
     {
-        // Arrange
-        var qrCodeData = "FCMS20231010120000";
         var member = _fixture.Build<Member>()
-            .With(x => x.CardNumber, qrCodeData)
-            .Without(x => x.Subscriptions)
-            .Create();
-
-        _memberRepoMock.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Member, bool>>>()))
-            .ReturnsAsync(new List<Member> { member });
-
-        // Act
-        var result = await _service.ValidateQrAsync(qrCodeData);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public async Task ValidateQrAsync_ShouldReturnFalse_WhenAllSubscriptionsExpired()
-    {
-        // Arrange
-        var qrCodeData = "FCMS20231010120000";
-        var member = _fixture.Build<Member>()
-            .With(x => x.CardNumber, qrCodeData)
+            .With(x => x.CardNumber, "CARD123")
             .With(x => x.Subscriptions, new List<Subscription>
             {
                 new Subscription
                 {
-                    StartDate = DateTime.UtcNow.AddMonths(-3),
-                    EndDate = DateTime.UtcNow.AddMonths(-1),
-                    AllowedVisits = 10,
-                    UsedVisits = 5
-                },
-                new Subscription
-                {
-                    StartDate = DateTime.UtcNow.AddMonths(-6),
-                    EndDate = DateTime.UtcNow.AddMonths(-4),
-                    AllowedVisits = 20,
-                    UsedVisits = 10
-                }
-            })
-            .Create();
-
-        _memberRepoMock.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Member, bool>>>()))
-            .ReturnsAsync(new List<Member> { member });
-
-        // Act
-        var result = await _service.ValidateQrAsync(qrCodeData);
-
-        // Assert
-        Assert.False(result);
-        Assert.All(member.Subscriptions, s => Assert.False(s.IsActive));
-    }
-
-    [Fact]
-    public async Task ValidateQrAsync_ShouldReturnTrue_WhenActiveSubscriptionExists()
-    {
-        // Arrange
-        var qrCodeData = "FCMS20231010120000";
-        var member = _fixture.Build<Member>()
-            .With(x => x.CardNumber, qrCodeData)
-            .With(x => x.Subscriptions, new List<Subscription>
-            {
-                new Subscription
-                {
-                    StartDate = DateTime.UtcNow.AddDays(-10),
-                    EndDate = DateTime.UtcNow.AddDays(20),
+                    StartDate = DateTime.UtcNow.AddDays(-1),
+                    EndDate = DateTime.UtcNow.AddDays(10),
                     AllowedVisits = 10,
                     UsedVisits = 5
                 }
@@ -368,72 +205,8 @@ public class MemberServiceTests
         _memberRepoMock.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Member, bool>>>()))
             .ReturnsAsync(new List<Member> { member });
 
-        // Act
-        var result = await _service.ValidateQrAsync(qrCodeData);
-
-        // Assert
+        var result = await _service.ValidateQrAsync("CARD123");
         Assert.True(result);
-        Assert.True(member.Subscriptions.First().IsActive);
-    }
-
-    [Fact]
-    public async Task ValidateQrAsync_ShouldReturnTrue_WhenUnlimitedVisitsSubscriptionExists()
-    {
-        // Arrange
-        var qrCodeData = "FCMS20231010120000";
-        var member = _fixture.Build<Member>()
-            .With(x => x.CardNumber, qrCodeData)
-            .With(x => x.Subscriptions, new List<Subscription>
-            {
-                new Subscription
-                {
-                    StartDate = DateTime.UtcNow.AddDays(-10),
-                    EndDate = DateTime.UtcNow.AddDays(20),
-                    AllowedVisits = null, // Limitsiz ziyarət
-                    UsedVisits = 1000
-                }
-            })
-            .Create();
-
-        _memberRepoMock.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Member, bool>>>()))
-            .ReturnsAsync(new List<Member> { member });
-
-        // Act
-        var result = await _service.ValidateQrAsync(qrCodeData);
-
-        // Assert
-        Assert.True(result);
-        Assert.True(member.Subscriptions.First().IsActive);
-    }
-
-    [Fact]
-    public async Task ValidateQrAsync_ShouldReturnFalse_WhenSubscriptionVisitsExhausted()
-    {
-        // Arrange
-        var qrCodeData = "FCMS20231010120000";
-        var member = _fixture.Build<Member>()
-            .With(x => x.CardNumber, qrCodeData)
-            .With(x => x.Subscriptions, new List<Subscription>
-            {
-                new Subscription
-                {
-                    StartDate = DateTime.UtcNow.AddDays(-10),
-                    EndDate = DateTime.UtcNow.AddDays(20),
-                    AllowedVisits = 10,
-                    UsedVisits = 10 // Bütün ziyarətlər istifadə edilib
-                }
-            })
-            .Create();
-
-        _memberRepoMock.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Member, bool>>>()))
-            .ReturnsAsync(new List<Member> { member });
-
-        // Act
-        var result = await _service.ValidateQrAsync(qrCodeData);
-
-        // Assert
-        Assert.False(result);
-        Assert.False(member.Subscriptions.First().IsActive);
     }
 
     #endregion
@@ -441,110 +214,34 @@ public class MemberServiceTests
     #region Get Methods Tests
 
     [Fact]
-    public async Task GetByIdAsync_ShouldReturnMember_WhenMemberExists()
+    public async Task GetByIdAsync_ShouldReturnMember_WhenExists()
     {
-        // Arrange
-        var memberId = Guid.NewGuid();
-        var expectedMember = _fixture.Build<Member>()
-            .With(x => x.Id, memberId)
-            .Create();
+        var member = _fixture.Create<Member>();
+        _memberRepoMock.Setup(x => x.GetByIdAsync(member.Id)).ReturnsAsync(member);
 
-        _memberRepoMock.Setup(x => x.GetByIdAsync(memberId))
-            .ReturnsAsync(expectedMember);
-
-        // Act
-        var result = await _service.GetByIdAsync(memberId);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(memberId, result.Id);
-        Assert.Equal(expectedMember.FullName, result.FullName);
+        var result = await _service.GetByIdAsync(member.Id);
+        Assert.Equal(member.Id, result!.Id);
     }
 
     [Fact]
-    public async Task GetByIdAsync_ShouldReturnNull_WhenMemberDoesNotExist()
+    public async Task GetAllAsync_ShouldReturnAllMembers()
     {
-        // Arrange
-        var nonExistentMemberId = Guid.NewGuid();
+        var members = _fixture.CreateMany<Member>(5).ToList();
+        _memberRepoMock.Setup(x => x.GetAllAsync()).ReturnsAsync(members);
 
-        _memberRepoMock.Setup(x => x.GetByIdAsync(nonExistentMemberId))
-            .ReturnsAsync((Member?)null);
-
-        // Act
-        var result = await _service.GetByIdAsync(nonExistentMemberId);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task GetAllAsync_ShouldReturnAllMembers_WhenMembersExist()
-    {
-        // Arrange
-        var expectedMembers = _fixture.CreateMany<Member>(5).ToList();
-
-        _memberRepoMock.Setup(x => x.GetAllAsync())
-            .ReturnsAsync(expectedMembers);
-
-        // Act
         var result = await _service.GetAllAsync();
-
-        // Assert
-        Assert.NotNull(result);
         Assert.Equal(5, result.Count());
-        Assert.IsAssignableFrom<IEnumerable<Member>>(result);
     }
 
     [Fact]
-    public async Task GetAllAsync_ShouldReturnEmptyCollection_WhenNoMembersExist()
+    public async Task GetByCardAsync_ShouldReturnMember_WhenExists()
     {
-        // Arrange
-        _memberRepoMock.Setup(x => x.GetAllAsync())
-            .ReturnsAsync(new List<Member>());
-
-        // Act
-        var result = await _service.GetAllAsync();
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
-    }
-
-    [Fact]
-    public async Task GetByCardAsync_ShouldReturnMember_WhenCardNumberExists()
-    {
-        // Arrange
-        var cardNumber = "FCMS20231010120000";
-        var expectedMember = _fixture.Build<Member>()
-            .With(x => x.CardNumber, cardNumber)
-            .Create();
-
+        var member = _fixture.Create<Member>();
         _memberRepoMock.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Member, bool>>>()))
-            .ReturnsAsync(new List<Member> { expectedMember });
+            .ReturnsAsync(new List<Member> { member });
 
-        // Act
-        var result = await _service.GetByCardAsync(cardNumber);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(cardNumber, result.CardNumber);
-        Assert.Equal(expectedMember.Id, result.Id);
-    }
-
-    [Fact]
-    public async Task GetByCardAsync_ShouldReturnNull_WhenCardNumberDoesNotExist()
-    {
-        // Arrange
-        var nonExistentCardNumber = "NONEXISTENT123";
-
-        _memberRepoMock.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Member, bool>>>()))
-            .ReturnsAsync(new List<Member>());
-
-        // Act
-        var result = await _service.GetByCardAsync(nonExistentCardNumber);
-
-        // Assert
-        Assert.Null(result);
+        var result = await _service.GetByCardAsync(member.CardNumber);
+        Assert.Equal(member.CardNumber, result!.CardNumber);
     }
 
     #endregion

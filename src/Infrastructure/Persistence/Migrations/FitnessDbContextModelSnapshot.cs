@@ -146,6 +146,9 @@ namespace FCMS.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("JoinDate")
                         .HasColumnType("datetime2");
 
@@ -237,6 +240,9 @@ namespace FCMS.Persistence.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("DefaultVisits")
+                        .HasColumnType("int");
 
                     b.Property<int>("DurationInMonths")
                         .HasColumnType("int");

@@ -1,9 +1,7 @@
-﻿using System.Security.Claims;
-using System.Text;
-using FCMS.Application.Abstracts;
+﻿using FCMS.Application.Abstracts;
 using FCMS.Application.Abstracts.Repositories;
-using FCMS.Application.DTOs.MemberDTOs;
 using FCMS.Application.Events;
+using FCMS.Application.Validations.MemberValidations;
 using FCMS.Domain.Entities;
 using FCMS.Infrastructure.Messaging;
 using FCMS.Infrastructure.Services;
@@ -12,7 +10,6 @@ using FCMS.Persistence.BackgroundJobs;
 using FCMS.Persistence.Configurations;
 using FCMS.Persistence.Contexts;
 using FCMS.Persistence.Services;
-using FluentValidation;
 using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.SqlServer;
@@ -21,8 +18,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using FCMS.Application.Validations.MemberValidations;
-
+using RabbitMQ.Client;
+using System.Security.Claims;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,7 +52,6 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 // ------------------ JWT ------------------
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 var jwtSettings = builder.Configuration.GetSection("Jwt");
-
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
 
 builder.Services.AddAuthentication(options =>
@@ -64,24 +61,21 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false; // Dev üçün
-    options.SaveToken = true;             // Token saxla
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
-
         RoleClaimType = ClaimTypes.Role,
-        ClockSkew = TimeSpan.Zero // vaxt fərqini sıfırla
+        ClockSkew = TimeSpan.Zero
     };
 });
-
 
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
@@ -127,32 +121,46 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddTransient<SubscriptionReminderJob>();
 
 // ------------------ RabbitMQ ------------------
-builder.Services.AddSingleton<IRabbitMqPublisher>(sp =>
+// 1️⃣ Singleton Connection
+builder.Services.AddSingleton(sp =>
 {
-    var logger = sp.GetRequiredService<ILogger<RabbitMqPublisher>>();
     var host = builder.Configuration.GetValue<string>("RabbitMQ:Host");
-    return new RabbitMqPublisher(host, logger);
+    var factory = new ConnectionFactory
+    {
+        HostName = host,
+        DispatchConsumersAsync = true
+    };
+    return factory.CreateConnection();
+});
+
+// 2️⃣ Channel Pool
+builder.Services.AddSingleton<RabbitMqChannelPool>();
+
+// 3️⃣ Publisher
+builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
+
+// 4️⃣ Consumers with factory pattern
+builder.Services.AddHostedService(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<RabbitMqConsumer<CustomerRegisteredEvent>>>();
+    var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+    var channelPool = sp.GetRequiredService<RabbitMqChannelPool>();
+    var queue = "customer_registered_queue";
+
+    return new RabbitMqConsumer<CustomerRegisteredEvent>(channelPool, queue, scopeFactory, logger);
 });
 
 builder.Services.AddHostedService(sp =>
 {
     var logger = sp.GetRequiredService<ILogger<RabbitMqConsumer<EmailMessage>>>();
     var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-    var host = builder.Configuration.GetValue<string>("RabbitMQ:Host");
+    var channelPool = sp.GetRequiredService<RabbitMqChannelPool>();
     var queue = builder.Configuration.GetValue<string>("RabbitMQ:QueueName");
 
-    return new RabbitMqConsumer<EmailMessage>(host, queue, scopeFactory, logger);
+    return new RabbitMqConsumer<EmailMessage>(channelPool, queue, scopeFactory, logger);
 });
 
-builder.Services.AddHostedService(sp =>
-{
-    var logger = sp.GetRequiredService<ILogger<RabbitMqConsumer<CustomerRegisteredEvent>>>();
-    var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-    var host = builder.Configuration.GetValue<string>("RabbitMQ:Host");
-    var queue = "customer_registered_queue";
 
-    return new RabbitMqConsumer<CustomerRegisteredEvent>(host, queue, scopeFactory, logger);
-});
 
 // ------------------ CORS ------------------
 builder.Services.AddCors(options =>
@@ -204,7 +212,6 @@ async Task CreateRolesAndAdminAsync(WebApplication app)
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
 
-    // ------------------ Roles ------------------
     string[] roles = { "Admin", "Reception" };
     foreach (var role in roles)
     {
@@ -212,7 +219,6 @@ async Task CreateRolesAndAdminAsync(WebApplication app)
             await roleManager.CreateAsync(new IdentityRole(role));
     }
 
-    // ------------------ Admin User ------------------
     var adminUser = await userManager.FindByNameAsync("admin");
     if (adminUser == null)
     {
@@ -221,7 +227,6 @@ async Task CreateRolesAndAdminAsync(WebApplication app)
         Console.WriteLine("Admin user yaradıldı: admin / Admin123!");
     }
 
-    // ------------------ Ensure Admin Role ------------------
     var userRoles = await userManager.GetRolesAsync(adminUser);
     if (!userRoles.Contains("Admin"))
     {
@@ -229,7 +234,6 @@ async Task CreateRolesAndAdminAsync(WebApplication app)
         Console.WriteLine("Admin user-ə 'Admin' rolu əlavə olundu.");
     }
 }
-
 
 async Task ConfigureRecurringJobsAsync(WebApplication app)
 {

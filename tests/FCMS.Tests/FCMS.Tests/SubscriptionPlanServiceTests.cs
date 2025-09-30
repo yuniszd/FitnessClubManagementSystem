@@ -1,9 +1,12 @@
 ﻿using AutoFixture;
 using FCMS.Application.DTOs.SubscriptionPlanDTOs;
+using FCMS.Application.Extensions.Exceptions;
 using FCMS.Domain.Entities;
 using FCMS.Persistence.Contexts;
 using FCMS.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using FCMS.Application.Extensions.Logging; 
 using Moq;
 
 namespace FCMS.Tests.Services;
@@ -11,17 +14,19 @@ namespace FCMS.Tests.Services;
 public class SubscriptionPlanServiceTests
 {
     private readonly Mock<FitnessDbContext> _contextMock;
+    private readonly Mock<ILogger<SubscriptionPlanService>> _loggerMock;
     private readonly SubscriptionPlanService _service;
     private readonly Fixture _fixture;
 
     public SubscriptionPlanServiceTests()
     {
         _contextMock = new Mock<FitnessDbContext>();
+        _loggerMock = new Mock<ILogger<SubscriptionPlanService>>();
         _fixture = new Fixture();
         _fixture.Behaviors.Add(new OmitOnRecursionBehavior());
 
-        // DbSet mock hazırlamaq üçün helper method istifadə edəcəyik
-        _service = new SubscriptionPlanService(_contextMock.Object);
+        // Logger daxil edildi
+        _service = new SubscriptionPlanService(_contextMock.Object, _loggerMock.Object);
     }
 
     #region GetAllAsync Tests
@@ -29,15 +34,12 @@ public class SubscriptionPlanServiceTests
     [Fact]
     public async Task GetAllAsync_ShouldReturnAllPlans()
     {
-        // Arrange
-        var plans = _fixture.CreateMany<SubscriptionPlan>(3).ToList();
-        var dbSetMock = CreateDbSetMock(plans.AsQueryable());
+        var plans = _fixture.CreateMany<SubscriptionPlan>(3).AsQueryable();
+        var dbSetMock = CreateDbSetMock(plans);
         _contextMock.Setup(c => c.SubscriptionPlans).Returns(dbSetMock.Object);
 
-        // Act
         var result = await _service.GetAllAsync();
 
-        // Assert
         Assert.Equal(3, result.Count);
         Assert.All(result, p => Assert.IsType<SubscriptionPlanDto>(p));
     }
@@ -45,8 +47,7 @@ public class SubscriptionPlanServiceTests
     [Fact]
     public async Task GetAllAsync_ShouldReturnEmptyList_WhenNoPlansExist()
     {
-        var plans = new List<SubscriptionPlan>().AsQueryable();
-        var dbSetMock = CreateDbSetMock(plans);
+        var dbSetMock = CreateDbSetMock(new List<SubscriptionPlan>().AsQueryable());
         _contextMock.Setup(c => c.SubscriptionPlans).Returns(dbSetMock.Object);
 
         var result = await _service.GetAllAsync();
@@ -93,22 +94,21 @@ public class SubscriptionPlanServiceTests
     [Fact]
     public async Task CreateAsync_ShouldAddPlanAndReturnDto()
     {
-        // Arrange
         var dto = _fixture.Create<SubscriptionPlanCreateDto>();
         var dbSetMock = CreateDbSetMock(new List<SubscriptionPlan>().AsQueryable());
         _contextMock.Setup(c => c.SubscriptionPlans).Returns(dbSetMock.Object);
         _contextMock.Setup(c => c.SaveChangesAsync(default)).ReturnsAsync(1);
 
-        // Act
         var result = await _service.CreateAsync(dto);
 
-        // Assert
         Assert.NotNull(result);
         Assert.Equal(dto.Name, result.Name);
         Assert.Equal(dto.DurationInMonths, result.DurationInMonths);
         Assert.Equal(dto.Price, result.Price);
+
         _contextMock.Verify(c => c.SubscriptionPlans.Add(It.IsAny<SubscriptionPlan>()), Times.Once);
         _contextMock.Verify(c => c.SaveChangesAsync(default), Times.Once);
+        _loggerMock.VerifyLog(LogLevel.Information, Times.Once()); // helper extension lazım ola bilər
     }
 
     #endregion
@@ -129,16 +129,16 @@ public class SubscriptionPlanServiceTests
         Assert.True(result);
         _contextMock.Verify(c => c.SubscriptionPlans.Remove(plan), Times.Once);
         _contextMock.Verify(c => c.SaveChangesAsync(default), Times.Once);
+        _loggerMock.VerifyLog(LogLevel.Information, Times.Once());
     }
 
     [Fact]
-    public async Task DeleteAsync_ShouldReturnFalse_WhenPlanNotFound()
+    public async Task DeleteAsync_ShouldThrowNotFound_WhenPlanNotFound()
     {
         _contextMock.Setup(c => c.SubscriptionPlans.FindAsync(It.IsAny<Guid>())).ReturnsAsync((SubscriptionPlan?)null);
 
-        var result = await _service.DeleteAsync(Guid.NewGuid());
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.DeleteAsync(Guid.NewGuid()));
 
-        Assert.False(result);
         _contextMock.Verify(c => c.SubscriptionPlans.Remove(It.IsAny<SubscriptionPlan>()), Times.Never);
     }
 

@@ -2,12 +2,14 @@
 using FCMS.Application.Abstracts.Repositories;
 using FCMS.Application.Responses;
 using FCMS.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FCMS.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin,Reception")] // Role-based access
 public class PaymentController : ControllerBase
 {
     private readonly IGenericRepository<Payment> _paymentRepo;
@@ -17,21 +19,18 @@ public class PaymentController : ControllerBase
         _paymentRepo = paymentRepo;
     }
 
-    // GET api/payment/{id}
-    [HttpGet("{id}")]
-    [ProducesResponseType(typeof(BaseResponse<PaymentDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status404NotFound)]
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(BaseResponse<PaymentDto>), 200)]
+    [ProducesResponseType(typeof(BaseResponse<object>), 404)]
     public async Task<IActionResult> Get(Guid id)
     {
         var payment = await _paymentRepo.GetByIdAsync(id);
         if (payment == null)
-        {
             return NotFound(new BaseResponse<object>
             {
                 Success = false,
                 Message = "Ödəniş tapılmadı"
             });
-        }
 
         var dto = new PaymentDto
         {
@@ -49,9 +48,8 @@ public class PaymentController : ControllerBase
         });
     }
 
-    // GET api/payment
     [HttpGet]
-    [ProducesResponseType(typeof(BaseResponse<IEnumerable<PaymentDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<IEnumerable<PaymentDto>>), 200)]
     public async Task<IActionResult> GetAll()
     {
         var payments = await _paymentRepo.GetAllAsync();
@@ -66,25 +64,22 @@ public class PaymentController : ControllerBase
         return Ok(new BaseResponse<IEnumerable<PaymentDto>>
         {
             Success = true,
-            Message = "Bütün ödənişlər",
+            Message = "Bütün ödənişlər gətirildi",
             Data = dtos
         });
     }
 
-    // POST api/payment
     [HttpPost]
-    [ProducesResponseType(typeof(BaseResponse<PaymentDto>), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaymentDto>), 201)]
+    [ProducesResponseType(typeof(BaseResponse<object>), 400)]
     public async Task<IActionResult> Create([FromBody] PaymentCreateDto dto)
     {
         if (dto == null)
-        {
             return BadRequest(new BaseResponse<object>
             {
                 Success = false,
                 Message = "Yanlış məlumat göndərilib"
             });
-        }
 
         var payment = new Payment
         {

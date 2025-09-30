@@ -1,10 +1,14 @@
-﻿using System.Text.Json;
-using FCMS.Application.Abstracts;
+﻿using FCMS.Application.Abstracts;
 using FCMS.Application.Abstracts.Repositories;
 using FCMS.Application.DTOs.SubscriptionDTOs;
 using FCMS.Application.Events;
+using FCMS.Application.Extensions;
+using FCMS.Application.Extensions.Exceptions;
 using FCMS.Domain.Entities;
 using FCMS.Infrastructure.Messaging;
+using System.Text.Json;
+
+namespace FCMS.Persistence.Services;
 
 public class SubscriptionService : ISubscriptionService
 {
@@ -28,29 +32,49 @@ public class SubscriptionService : ISubscriptionService
     // ------------------- CRUD -------------------
     public async Task<SubscriptionDto> GetByIdAsync(Guid id)
     {
-        var subscription = await _subscriptionRepo.GetByIdAsync(id);
-        if (subscription == null) return null!;
-        return MapToDto(subscription);
+        var subscription = await _subscriptionRepo.GetByIdAsync(id)
+            ?? throw new NotFoundException("Subscription", id);
+
+        return subscription.ToDto();
     }
 
     public async Task<IEnumerable<SubscriptionDto>> GetAllAsync()
     {
         var subscriptions = await _subscriptionRepo.GetAllAsync();
-        return subscriptions.Select(MapToDto);
+        return subscriptions.Select(s => s.ToDto());
     }
 
     public async Task<SubscriptionDto> CreateAsync(SubscriptionCreateDto dto, int? daysToAdd = null)
     {
-        // Planı DB-dən götür
-        var plan = await _subscriptionPlanRepo.GetByIdAsync(dto.SubscriptionPlanId);
-        if (plan == null) throw new Exception("Plan tapılmadı");
+        var errors = new List<string>();
 
-        // EndDate hesabla
-        DateTime endDate = dto.StartDate.AddMonths(plan.DurationInMonths); // default plan duration
-        if (daysToAdd.HasValue)
+        if (dto == null)
         {
-            endDate = dto.StartDate.AddDays(daysToAdd.Value); // optional day-based duration
+            errors.Add("SubscriptionCreateDto cannot be null");
+            throw new ValidationException(errors.ToArray());
         }
+
+        if (dto.MemberId == Guid.Empty)
+            errors.Add("MemberId is required");
+
+        if (dto.SubscriptionPlanId == Guid.Empty)
+            errors.Add("SubscriptionPlanId is required");
+
+        if (dto.StartDate == default)
+            errors.Add("StartDate is required");
+
+        if (dto.AllowedVisits.HasValue && dto.AllowedVisits < 0)
+            errors.Add("AllowedVisits cannot be negative");
+
+        if (errors.Any())
+            throw new ValidationException(errors.ToArray());
+
+        var plan = await _subscriptionPlanRepo.GetByIdAsync(dto.SubscriptionPlanId)
+            ?? throw new NotFoundException("SubscriptionPlan", dto.SubscriptionPlanId);
+
+        DateTime endDate = dto.StartDate.AddMonths(plan.DurationInMonths);
+        if (daysToAdd.HasValue)
+            endDate = dto.StartDate.AddDays(daysToAdd.Value);
 
         var subscription = new Subscription
         {
@@ -64,65 +88,74 @@ public class SubscriptionService : ISubscriptionService
         await _subscriptionRepo.AddAsync(subscription);
         await _subscriptionRepo.SaveChangesAsync();
 
-        return MapToDto(subscription);
+        return subscription.ToDto();
     }
 
     public async Task<SubscriptionDto> UpdateAsync(Guid id, SubscriptionUpdateDto dto)
     {
-        var subscription = await _subscriptionRepo.GetByIdAsync(id);
-        if (subscription == null) return null!;
+        var errors = new List<string>();
+        if (dto == null)
+            errors.Add("SubscriptionUpdateDto cannot be null");
 
-        subscription.AllowedVisits = dto.AllowedVisits;
-        subscription.EndDate = dto.EndDate;
+        if (dto.AllowedVisits.HasValue && dto.AllowedVisits < 0)
+            errors.Add("AllowedVisits cannot be negative");
+
+        if (errors.Any())
+            throw new ValidationException(errors.ToArray());
+
+        var subscription = await _subscriptionRepo.GetByIdAsync(id)
+            ?? throw new NotFoundException("Subscription", id);
+
+        subscription.UpdateFromDto(dto);
 
         _subscriptionRepo.Update(subscription);
         await _subscriptionRepo.SaveChangesAsync();
 
-        return MapToDto(subscription);
+        return subscription.ToDto();
     }
 
     public async Task<bool> DeleteAsync(Guid id)
     {
-        var subscription = await _subscriptionRepo.GetByIdAsync(id);
-        if (subscription == null) return false;
+        var subscription = await _subscriptionRepo.GetByIdAsync(id)
+            ?? throw new NotFoundException("Subscription", id);
 
         _subscriptionRepo.Remove(subscription);
         await _subscriptionRepo.SaveChangesAsync();
+
         return true;
     }
 
     // ------------------- Increment Visits -------------------
     public async Task<bool> IncrementVisitAsync(Guid id)
     {
-        var subscription = await _subscriptionRepo.GetByIdAsync(id);
-        if (subscription == null) return false;
+        var subscription = await _subscriptionRepo.GetByIdAsync(id)
+            ?? throw new NotFoundException("Subscription", id);
 
         subscription.UsedVisits += 1;
         await _subscriptionRepo.SaveChangesAsync();
+
         return true;
     }
 
     // ------------------- Renew Subscription -------------------
     public async Task RenewSubscriptionAsync(Guid subscriptionId, decimal amountPaid, int? daysToAdd = null)
     {
-        var subscription = await _subscriptionRepo.GetByIdAsync(subscriptionId);
-        if (subscription == null)
-            throw new InvalidOperationException("Abunə tapılmadı");
+        var subscription = await _subscriptionRepo.GetByIdAsync(subscriptionId)
+            ?? throw new NotFoundException("Subscription", subscriptionId);
 
         var now = DateTime.UtcNow;
         var planDuration = subscription.SubscriptionPlan.DurationInMonths;
 
-        // Ödəniş əlavə et
         var payment = new Payment
         {
             SubscriptionId = subscription.Id,
             Amount = amountPaid,
             PaidDate = now
         };
+
         await _paymentRepo.AddAsync(payment);
         await _paymentRepo.SaveChangesAsync();
 
-        // Abunə müddətini yenilə
         if (subscription.EndDate >= now)
         {
             subscription.EndDate = subscription.EndDate.AddMonths(planDuration);
@@ -134,13 +167,10 @@ public class SubscriptionService : ISubscriptionService
         }
 
         if (daysToAdd.HasValue)
-        {
             subscription.EndDate = subscription.StartDate.AddDays(daysToAdd.Value);
-        }
 
         await _subscriptionRepo.SaveChangesAsync();
 
-        // Event at (email/sms üçün)
         var renewalEvent = new SubscriptionRenewedEvent
         {
             Email = subscription.Member.Email!,
@@ -153,19 +183,29 @@ public class SubscriptionService : ISubscriptionService
         await _rabbitMqPublisher.PublishAsync("subscription_renewed_queue", json);
     }
 
-    // ------------------- Helper -------------------
-    private SubscriptionDto MapToDto(Subscription subscription)
+    // ------------------- Paging & Search -------------------
+    public async Task<(IEnumerable<SubscriptionDto> Subscriptions, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize)
     {
-        return new SubscriptionDto
-        {
-            Id = subscription.Id,
-            MemberId = subscription.MemberId,
-            SubscriptionPlanId = subscription.SubscriptionPlanId,
-            StartDate = subscription.StartDate,
-            EndDate = subscription.EndDate,
-            AllowedVisits = subscription.AllowedVisits,
-            UsedVisits = subscription.UsedVisits,
-            IsActive = subscription.IsActive
-        };
+        var query = _subscriptionRepo.GetQueryable();
+        int totalCount = query.Count();
+        var data = query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return await Task.FromResult((data.Select(s => s.ToDto()), totalCount));
+    }
+
+    public async Task<(IEnumerable<SubscriptionDto> Subscriptions, int TotalCount)> SearchPagedAsync(
+        string? memberName, bool? isActive, int pageNumber, int pageSize)
+    {
+        var query = _subscriptionRepo.GetQueryable();
+
+        if (!string.IsNullOrWhiteSpace(memberName))
+            query = query.Where(s => s.Member.FullName.Contains(memberName));
+
+        if (isActive.HasValue)
+            query = query.Where(s => s.IsActive == isActive.Value);
+
+        int totalCount = query.Count();
+        var data = query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+
+        return await Task.FromResult((data.Select(s => s.ToDto()), totalCount));
     }
 }

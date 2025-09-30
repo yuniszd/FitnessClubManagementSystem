@@ -2,12 +2,15 @@
 using FCMS.Domain.Entities;
 using FCMS.Application.Abstracts.Repositories;
 using FCMS.Application.Responses;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace FCMS.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")] 
     public class SubscriptionPlanController : ControllerBase
     {
         private readonly IGenericRepository<SubscriptionPlan> _planRepo;
@@ -19,16 +22,13 @@ namespace FCMS.API.Controllers
             _logger = logger;
         }
 
-        // GET /api/subscriptionplan
         [HttpGet]
-        [ProducesResponseType(typeof(BaseResponse<IEnumerable<SubscriptionPlanDto>>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
             try
             {
                 var plans = await _planRepo.GetAllAsync();
-
                 var dtos = plans.Select(plan => new SubscriptionPlanDto
                 {
                     Id = plan.Id,
@@ -37,40 +37,24 @@ namespace FCMS.API.Controllers
                     Price = plan.Price
                 }).ToList();
 
-                return Ok(new BaseResponse<IEnumerable<SubscriptionPlanDto>>
-                {
-                    Success = true,
-                    Message = "Bütün abunə planları gətirildi",
-                    Data = dtos
-                });
+                return Ok(SuccessResponse(dtos, "Bütün abunə planları gətirildi"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "GetAll zamanı xəta baş verdi");
-                return StatusCode(500, new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
+                return StatusCode(500, FailResponse(ex.Message));
             }
         }
 
-        // GET /api/subscriptionplan/{id}
         [HttpGet("{id:guid}")]
-        [ProducesResponseType(typeof(BaseResponse<SubscriptionPlanDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById(Guid id)
         {
             try
             {
                 var plan = await _planRepo.GetByIdAsync(id);
                 if (plan == null)
-                    return NotFound(new BaseResponse<object>
-                    {
-                        Success = false,
-                        Message = $"Subscription plan tapılmadı (ID: {id})"
-                    });
+                    return NotFound(FailResponse($"Subscription plan tapılmadı (ID: {id})"));
 
                 var dto = new SubscriptionPlanDto
                 {
@@ -80,40 +64,20 @@ namespace FCMS.API.Controllers
                     Price = plan.Price
                 };
 
-                return Ok(new BaseResponse<SubscriptionPlanDto>
-                {
-                    Success = true,
-                    Message = "Abunə planı tapıldı",
-                    Data = dto
-                });
+                return Ok(SuccessResponse(dto, "Abunə planı tapıldı"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "GetById zamanı xəta baş verdi. ID: {PlanId}", id);
-                return StatusCode(500, new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
+                return StatusCode(500, FailResponse(ex.Message));
             }
         }
 
-        // POST /api/subscriptionplan
         [HttpPost]
-        [ProducesResponseType(typeof(BaseResponse<SubscriptionPlanDto>), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Create([FromBody] SubscriptionPlanCreateDto dto)
         {
             if (!ModelState.IsValid)
-            {
-                var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-                return BadRequest(new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = errors
-                });
-            }
+                return BadRequest(FailResponse(ModelState));
 
             try
             {
@@ -135,51 +99,26 @@ namespace FCMS.API.Controllers
                     Price = plan.Price
                 };
 
-                return CreatedAtAction(nameof(GetById), new { id = plan.Id }, new BaseResponse<SubscriptionPlanDto>
-                {
-                    Success = true,
-                    Message = "Abunə planı yaradıldı",
-                    Data = responseDto
-                });
+                return CreatedAtAction(nameof(GetById), new { id = plan.Id }, SuccessResponse(responseDto, "Abunə planı yaradıldı"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Create zamanı xəta baş verdi");
-                return StatusCode(500, new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
+                return StatusCode(500, FailResponse(ex.Message));
             }
         }
 
-        // PUT /api/subscriptionplan/{id}
         [HttpPut("{id:guid}")]
-        [ProducesResponseType(typeof(BaseResponse<SubscriptionPlanDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Update(Guid id, [FromBody] SubscriptionPlanCreateDto dto)
         {
             if (!ModelState.IsValid)
-            {
-                var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-                return BadRequest(new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = errors
-                });
-            }
+                return BadRequest(FailResponse(ModelState));
 
             try
             {
                 var plan = await _planRepo.GetByIdAsync(id);
                 if (plan == null)
-                    return NotFound(new BaseResponse<object>
-                    {
-                        Success = false,
-                        Message = $"Subscription plan tapılmadı (ID: {id})"
-                    });
+                    return NotFound(FailResponse($"Subscription plan tapılmadı (ID: {id})"));
 
                 plan.Name = dto.Name;
                 plan.DurationInMonths = dto.DurationInMonths;
@@ -195,40 +134,23 @@ namespace FCMS.API.Controllers
                     Price = plan.Price
                 };
 
-                return Ok(new BaseResponse<SubscriptionPlanDto>
-                {
-                    Success = true,
-                    Message = "Abunə planı yeniləndi",
-                    Data = responseDto
-                });
+                return Ok(SuccessResponse(responseDto, "Abunə planı yeniləndi"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Update zamanı xəta baş verdi. ID: {PlanId}", id);
-                return StatusCode(500, new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
+                return StatusCode(500, FailResponse(ex.Message));
             }
         }
 
-        // DELETE /api/subscriptionplan/{id}
         [HttpDelete("{id:guid}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
                 var plan = await _planRepo.GetByIdAsync(id);
                 if (plan == null)
-                    return NotFound(new BaseResponse<object>
-                    {
-                        Success = false,
-                        Message = $"Subscription plan tapılmadı (ID: {id})"
-                    });
+                    return NotFound(FailResponse($"Subscription plan tapılmadı (ID: {id})"));
 
                 _planRepo.Remove(plan);
                 await _planRepo.SaveChangesAsync();
@@ -238,12 +160,22 @@ namespace FCMS.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Delete zamanı xəta baş verdi. ID: {PlanId}", id);
-                return StatusCode(500, new BaseResponse<object>
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
+                return StatusCode(500, FailResponse(ex.Message));
             }
         }
+
+        #region Response Helpers
+        private static BaseResponse<T?> SuccessResponse<T>(T? data, string message) =>
+            new() { Success = true, Message = message, Data = data };
+
+        private static BaseResponse<object> FailResponse(string message) =>
+            new() { Success = false, Message = message };
+
+        private static BaseResponse<object> FailResponse(ModelStateDictionary modelState)
+        {
+            var errors = string.Join("; ", modelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+            return new BaseResponse<object> { Success = false, Message = errors };
+        }
+        #endregion
     }
 }

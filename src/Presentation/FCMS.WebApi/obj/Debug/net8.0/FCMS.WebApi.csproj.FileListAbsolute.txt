@@ -8,6 +8,7 @@ C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\Azure.Core.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\Azure.Identity.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\BouncyCastle.Cryptography.dll
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\Castle.Core.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\FluentValidation.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\FluentValidation.AspNetCore.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\FluentValidation.DependencyInjectionExtensions.dll
@@ -54,6 +55,7 @@ C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\Microsoft.Win32.SystemEvents.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\MimeKit.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\Mono.TextTemplating.dll
+C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\Moq.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\Newtonsoft.Json.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\QRCoder.dll
 C:\Users\Yunis\source\repos\FitnessCenterManagementSystem\src\Presentation\FCMS.WebApi\bin\Debug\net8.0\RabbitMQ.Client.dll

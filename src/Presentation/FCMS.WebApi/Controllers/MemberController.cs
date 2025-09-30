@@ -2,12 +2,16 @@
 using FCMS.Application.DTOs.MemberDTOs;
 using FCMS.Application.DTOs.SubscriptionDTOs;
 using FCMS.Application.Responses;
+using FCMS.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
 
 namespace FCMS.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin,Reception")]
 public class MemberController : ControllerBase
 {
     private readonly IMemberService _memberService;
@@ -19,40 +23,29 @@ public class MemberController : ControllerBase
         _logger = logger;
     }
 
+    // 🔹 GET: api/member?pageNumber=1&pageSize=20
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
     {
         try
         {
             var members = await _memberService.GetAllAsync();
-            var dtos = members.Select(m => new MemberDto
-            {
-                Id = m.Id,
-                FullName = m.FullName,
-                PhoneNumber = m.PhoneNumber,
-                Email = m.Email,
-                JoinDate = m.JoinDate,
-                CardNumber = m.CardNumber,
-                Subscriptions = m.Subscriptions.Select(s => new SubscriptionDto
-                {
-                    Id = s.Id,
-                    MemberId = m.Id,
-                    MemberName = m.FullName,
-                    SubscriptionPlanId = s.SubscriptionPlanId,
-                    PlanName = s.SubscriptionPlan.Name,
-                    StartDate = s.StartDate,
-                    EndDate = s.EndDate,
-                    AllowedVisits = s.AllowedVisits,
-                    UsedVisits = s.UsedVisits,
-                    IsActive = s.IsActive
-                }).ToList()
-            }).ToList();
+            var totalCount = members.Count();
 
-            return Ok(new BaseResponse<IEnumerable<MemberDto>>
+            var dtos = members
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(MapToMemberDto)
+                .ToList();
+
+            return Ok(new PagedResponse<MemberDto>
             {
                 Success = true,
                 Message = "Bütün üzvlər gətirildi",
-                Data = dtos
+                Data = dtos,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = totalCount
             });
         }
         catch (Exception ex)
@@ -61,11 +54,91 @@ public class MemberController : ControllerBase
             return StatusCode(500, new BaseResponse<object>
             {
                 Success = false,
-                Message = ex.Message
+                Message = "Üzvlər gətirilərkən xəta baş verdi"
             });
         }
     }
 
+    // 🔹 GET: api/member/search?fullName=&cardNumber=&isActive=&pageNumber=1&pageSize=20
+    [HttpGet("search")]
+    public async Task<IActionResult> Search(
+        [FromQuery] string? fullName,
+        [FromQuery] string? cardNumber,
+        [FromQuery] bool? isActive,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        try
+        {
+            var members = await _memberService.GetAllAsync();
+
+            if (!string.IsNullOrWhiteSpace(fullName))
+                members = members.Where(m => m.FullName.Contains(fullName, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (!string.IsNullOrWhiteSpace(cardNumber))
+                members = members.Where(m => m.CardNumber.Contains(cardNumber)).ToList();
+
+            if (isActive.HasValue)
+                members = members.Where(m => m.Subscriptions.Any(s => s.IsActive == isActive.Value)).ToList();
+
+            var totalCount = members.Count();
+
+            var dtos = members
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(MapToMemberDto)
+                .ToList();
+
+            return Ok(new PagedResponse<MemberDto>
+            {
+                Success = true,
+                Message = "Üzvlər filtrləndi",
+                Data = dtos,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Search zamanı xəta baş verdi");
+            return StatusCode(500, new BaseResponse<object>
+            {
+                Success = false,
+                Message = "Üzvlərin filtrlənməsi zamanı xəta baş verdi"
+            });
+        }
+    }
+
+    // 🔹 GET: api/member/{id}
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        try
+        {
+            var member = await _memberService.GetByIdAsync(id);
+            if (member == null)
+                return NotFound(new BaseResponse<object> { Success = false, Message = "Member tapılmadı" });
+
+            return Ok(new BaseResponse<MemberDto>
+            {
+                Success = true,
+                Message = "Member tapıldı",
+                Data = MapToMemberDto(member)
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GetById zamanı xəta baş verdi");
+            return StatusCode(500, new BaseResponse<object>
+            {
+                Success = false,
+                Message = "Member tapılarkən xəta baş verdi"
+            });
+        }
+    }
+
+    // 🔹 POST: api/member
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateMemberDto dto)
     {
@@ -83,34 +156,11 @@ public class MemberController : ControllerBase
         {
             var member = await _memberService.AddMemberAsync(dto);
 
-            var memberDto = new MemberDto
-            {
-                Id = member.Id,
-                FullName = member.FullName,
-                PhoneNumber = member.PhoneNumber,
-                Email = member.Email,
-                JoinDate = member.JoinDate,
-                CardNumber = member.CardNumber,
-                Subscriptions = member.Subscriptions.Select(s => new SubscriptionDto
-                {
-                    Id = s.Id,
-                    MemberId = member.Id,
-                    MemberName = member.FullName,
-                    SubscriptionPlanId = s.SubscriptionPlanId,
-                    PlanName = s.SubscriptionPlan.Name,
-                    StartDate = s.StartDate,
-                    EndDate = s.EndDate,
-                    AllowedVisits = s.AllowedVisits,
-                    UsedVisits = s.UsedVisits,
-                    IsActive = s.IsActive
-                }).ToList()
-            };
-
             return CreatedAtAction(nameof(GetById), new { id = member.Id }, new BaseResponse<MemberDto>
             {
                 Success = true,
                 Message = "Member yaradıldı və email göndərildi",
-                Data = memberDto
+                Data = MapToMemberDto(member)
             });
         }
         catch (Exception ex)
@@ -119,19 +169,15 @@ public class MemberController : ControllerBase
             return StatusCode(500, new BaseResponse<object>
             {
                 Success = false,
-                Message = ex.Message
+                Message = "Member yaradılarkən xəta baş verdi"
             });
         }
     }
 
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    #region Private Methods
+    private static MemberDto MapToMemberDto(Member member)
     {
-        var member = await _memberService.GetByIdAsync(id);
-        if (member == null)
-            return NotFound(new BaseResponse<object> { Success = false, Message = "Member tapılmadı" });
-
-        var dto = new MemberDto
+        return new MemberDto
         {
             Id = member.Id,
             FullName = member.FullName,
@@ -145,7 +191,7 @@ public class MemberController : ControllerBase
                 MemberId = member.Id,
                 MemberName = member.FullName,
                 SubscriptionPlanId = s.SubscriptionPlanId,
-                PlanName = s.SubscriptionPlan.Name,
+                PlanName = s.SubscriptionPlan?.Name ?? string.Empty,
                 StartDate = s.StartDate,
                 EndDate = s.EndDate,
                 AllowedVisits = s.AllowedVisits,
@@ -153,14 +199,6 @@ public class MemberController : ControllerBase
                 IsActive = s.IsActive
             }).ToList()
         };
-
-        return Ok(new BaseResponse<MemberDto>
-        {
-            Success = true,
-            Message = "Member tapıldı",
-            Data = dto
-        });
     }
-
-    // Digər metodlar: Update, Delete, GetByCard dəyişmir, köhnə kodu istifadə edə bilərsən
+    #endregion
 }

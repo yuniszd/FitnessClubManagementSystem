@@ -1,68 +1,105 @@
 ﻿using FCMS.Application.Abstracts;
 using FCMS.Application.DTOs.PaymentDTOs;
 using FCMS.Application.Extensions;
+using FCMS.Application.Extensions.Exceptions;
 using FCMS.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
-using System;
-namespace FCMS.Persistence.Services;
 
-public class PaymentService : IPaymentService
+namespace FCMS.Persistence.Services
 {
-    private readonly FitnessDbContext _context;
-
-    public PaymentService(FitnessDbContext context)
+    public class PaymentService : IPaymentService
     {
-        _context = context;
-    }
+        private readonly FitnessDbContext _context;
 
-    // Yeni ödəniş yaratmaq
-    public PaymentDto CreatePayment(PaymentCreateDto dto)
-    {
-        var payment = dto.ToEntity();
-        _context.Payments.Add(payment);
-        _context.SaveChanges();
-        return payment.ToDto();
-    }
+        public PaymentService(FitnessDbContext context)
+        {
+            _context = context;
+        }
 
-    // ID ilə ödənişi götürmək
-    public PaymentDto? GetPaymentById(Guid id)
-    {
-        var payment = _context.Payments
-                              .AsNoTracking()
-                              .FirstOrDefault(p => p.Id == id);
+        // Yeni ödəniş yaratmaq
+        public PaymentDto CreatePayment(PaymentCreateDto dto)
+        {
+            if (dto == null)
+                throw new ValidationException("PaymentCreateDto", "cannot be null");
 
-        return payment?.ToDto();
-    }
+            var payment = dto.ToEntity();
+            _context.Payments.Add(payment);
 
-    // Bütün ödənişləri gətirmək
-    public IEnumerable<PaymentDto> GetAllPayments()
-    {
-        return _context.Payments
-                       .AsNoTracking()
-                       .Select(p => p.ToDto())
-                       .ToList();
-    }
+            try
+            {
+                _context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                throw new InternalErrorException("Failed to create payment", ex);
+            }
 
-    // Ödənişi yeniləmək
-    public PaymentDto? UpdatePayment(Guid id, PaymentDto dto)
-    {
-        var payment = _context.Payments.FirstOrDefault(p => p.Id == id);
-        if (payment == null) return null;
+            return payment.ToDto();
+        }
 
-        payment.UpdateEntity(dto);
-        _context.SaveChanges();
+        // ID ilə ödənişi götürmək
+        public PaymentDto GetPaymentById(Guid id)
+        {
+            var payment = _context.Payments
+                                  .AsNoTracking()
+                                  .FirstOrDefault(p => p.Id == id);
 
-        return payment.ToDto();
-    }
+            if (payment == null)
+                throw new NotFoundException("Payment", id);
 
-    // Ödənişi silmək
-    public bool DeletePayment(Guid id)
-    {
-        var payment = _context.Payments.FirstOrDefault(p => p.Id == id);
-        if (payment == null) return false;
+            return payment.ToDto();
+        }
 
-        _context.Payments.Remove(payment);
-        _context.SaveChanges();
-        return true;
+        // Bütün ödənişləri gətirmək
+        public IEnumerable<PaymentDto> GetAllPayments()
+        {
+            return _context.Payments
+                           .AsNoTracking()
+                           .Select(p => p.ToDto())
+                           .ToList();
+        }
+
+        // Ödənişi yeniləmək
+        public PaymentDto UpdatePayment(Guid id, PaymentDto dto)
+        {
+            if (dto == null)
+                throw new ValidationException("PaymentDto", "cannot be null");
+
+            var payment = _context.Payments.FirstOrDefault(p => p.Id == id);
+            if (payment == null)
+                throw new NotFoundException("Payment", id);
+
+            payment.UpdateEntity(dto);
+
+            try
+            {
+                _context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                throw new InternalErrorException($"Failed to update payment with ID {id}", ex);
+            }
+
+            return payment.ToDto();
+        }
+
+        // Ödənişi silmək
+        public void DeletePayment(Guid id)
+        {
+            var payment = _context.Payments.FirstOrDefault(p => p.Id == id);
+            if (payment == null)
+                throw new NotFoundException("Payment", id);
+
+            _context.Payments.Remove(payment);
+
+            try
+            {
+                _context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                throw new InternalErrorException($"Failed to delete payment with ID {id}", ex);
+            }
+        }
     }
 }

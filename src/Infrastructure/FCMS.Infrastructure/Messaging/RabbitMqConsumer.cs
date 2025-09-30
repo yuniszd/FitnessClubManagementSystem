@@ -8,109 +8,110 @@ using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace FCMS.Infrastructure.Messaging
+namespace FCMS.Infrastructure.Messaging;
+
+public class RabbitMqConsumer<T> : BackgroundService
 {
-    public class RabbitMqConsumer<T> : BackgroundService
+    private readonly RabbitMqChannelPool _channelPool;
+    private readonly string _queueName;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<RabbitMqConsumer<T>> _logger;
+
+    private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
     {
-        private readonly IConnection _connection;
-        private readonly IModel _channel;
-        private readonly string _queueName;
-        private readonly ILogger<RabbitMqConsumer<T>> _logger;
-        private readonly IServiceScopeFactory _scopeFactory;
+        PropertyNameCaseInsensitive = true, 
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+    };
 
-        public RabbitMqConsumer(
-            string hostName,
-            string queueName,
-            IServiceScopeFactory scopeFactory,
-            ILogger<RabbitMqConsumer<T>> logger)
+    public RabbitMqConsumer(
+        RabbitMqChannelPool channelPool,
+        string queueName,
+        IServiceScopeFactory scopeFactory,
+        ILogger<RabbitMqConsumer<T>> logger)
+    {
+        _channelPool = channelPool;
+        _queueName = queueName;
+        _scopeFactory = scopeFactory;
+        _logger = logger;
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        var channel = _channelPool.RentChannel();
+
+        channel.QueueDeclare(queue: _queueName, durable: true, exclusive: false, autoDelete: false);
+
+        var consumer = new AsyncEventingBasicConsumer(channel);
+
+        consumer.Received += async (sender, ea) =>
         {
-            _logger = logger;
-            _scopeFactory = scopeFactory;
-            _queueName = queueName;
-
-            var factory = new ConnectionFactory
+            try
             {
-                HostName = hostName,
-                DispatchConsumersAsync = true
-            };
+                var json = Encoding.UTF8.GetString(ea.Body.ToArray());
 
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
+                // ✅ Case-insensitive deserialization
+                var message = JsonSerializer.Deserialize<T>(json, _jsonOptions);
 
-            _channel.QueueDeclare(
-                queue: queueName,
-                durable: true,
-                exclusive: false,
-                autoDelete: false,
-                arguments: null);
+                if (message == null)
+                {
+                    _logger.LogWarning("Received null or unparseable message: {Json}", json);
+                    channel.BasicAck(ea.DeliveryTag, false);
+                    return;
+                }
+
+                using var scope = _scopeFactory.CreateScope();
+                var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+
+                switch (message)
+                {
+                    case CustomerRegisteredEvent evt:
+                        await HandleCustomerRegisteredEventAsync(evt, emailService);
+                        break;
+
+                    default:
+                        _logger.LogWarning("Unknown message type: {Type}", typeof(T).Name);
+                        break;
+                }
+
+                channel.BasicAck(ea.DeliveryTag, false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing RabbitMQ message for queue {Queue}", _queueName);
+                channel.BasicNack(ea.DeliveryTag, false, requeue: false); // ❌ Flood problemi olmayacaq
+            }
+        };
+
+        channel.BasicConsume(queue: _queueName, autoAck: false, consumer: consumer);
+
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleCustomerRegisteredEventAsync(CustomerRegisteredEvent evt, IEmailService emailService)
+    {
+        if (string.IsNullOrWhiteSpace(evt.Email))
+        {
+            _logger.LogWarning("Email boşdur, mesaj göndərilməyəcək: {FullName}", evt.FullName);
+            return;
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        var subject = "Gym-ə xoş gəlmisiniz!";
+        var body = $@"
+            Salam {evt.FullName},<br/><br/>
+            Sizin abonementiniz '{evt.PlanName}' planı ilə aktivdir. 
+            Bitmə tarixi: {evt.SubscriptionEndDate:dd/MM/yyyy}.<br/><br/>
+            Hər ziyarətinizdə QR kodu təqdim edin.<br/><br/>
+            Sağlamlıqla qalın!<br/>
+            Gym Management";
+
+        try
         {
-            var consumer = new AsyncEventingBasicConsumer(_channel);
-
-            consumer.Received += async (sender, ea) =>
-            {
-                try
-                {
-                    var json = Encoding.UTF8.GetString(ea.Body.ToArray());
-                    var message = JsonSerializer.Deserialize<T>(json);
-
-                    if (message is null)
-                    {
-                        _logger.LogWarning("⚠️ Boş və ya deserialize olunmayan mesaj gəldi.");
-                        _channel.BasicAck(ea.DeliveryTag, false);
-                        return;
-                    }
-
-                    using var scope = _scopeFactory.CreateScope();
-                    var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-
-                    switch (message)
-                    {
-                        case CustomerRegisteredEvent evt:
-                            await HandleCustomerRegisteredEventAsync(evt, emailService);
-                            break;
-
-                        default:
-                            _logger.LogWarning("⚠️ Tanınmayan mesaj tipi: {Type}", typeof(T).Name);
-                            break;
-                    }
-
-                    _channel.BasicAck(ea.DeliveryTag, false);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "❌ RabbitMQ mesajı işlənərkən xəta baş verdi.");
-                    _channel.BasicNack(ea.DeliveryTag, false, requeue: true);
-                }
-            };
-
-            _channel.BasicConsume(_queueName, autoAck: false, consumer: consumer);
-            return Task.CompletedTask;
-        }
-
-        private async Task HandleCustomerRegisteredEventAsync(CustomerRegisteredEvent evt, IEmailService emailService)
-        {
-            var subject = "Gym-ə xoş gəlmisiniz!";
-            var body = $@"
-                Salam {evt.FullName},<br/><br/>
-                Sizin abonementiniz '{evt.PlanName}' planı ilə aktivdir. 
-                Bitmə tarixi: {evt.SubscriptionEndDate:dd/MM/yyyy}.<br/><br/>
-                Hər ziyarətinizdə QR kodu təqdim edin.<br/><br/>
-                Sağlamlıqla qalın!<br/>
-                Gym Management";
-
             await emailService.SendEmailAsync(evt.Email, subject, body, evt.QrCodeAttachment);
-
             _logger.LogInformation("📧 Email göndərildi: {Email}", evt.Email);
         }
-
-        public override void Dispose()
+        catch (Exception ex)
         {
-            _channel?.Dispose();
-            _connection?.Dispose();
-            base.Dispose();
+            _logger.LogError(ex, "Email göndərilərkən xəta baş verdi: {Email}", evt.Email);
         }
     }
 }

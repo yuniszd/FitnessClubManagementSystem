@@ -16,21 +16,18 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
-    // DTO-lar
-    public class LoginRequest
-    {
-        [Required(ErrorMessage = "Username boş ola bilməz")]
-        public string Username { get; set; } = string.Empty;
+    #region DTOs
 
-        [Required(ErrorMessage = "Password boş ola bilməz")]
-        public string Password { get; set; } = string.Empty;
-    }
+    public record LoginRequest(
+        [Required(ErrorMessage = "Username boş ola bilməz")] string Username,
+        [Required(ErrorMessage = "Password boş ola bilməz")] string Password
+    );
 
-    public class RefreshTokenRequest
-    {
-        [Required(ErrorMessage = "RefreshToken boş ola bilməz")]
-        public string RefreshToken { get; set; } = string.Empty;
-    }
+    public record RefreshTokenRequest(
+        [Required(ErrorMessage = "RefreshToken boş ola bilməz")] string RefreshToken
+    );
+
+    #endregion
 
     /// <summary>
     /// Admin / Reception istifadəçisini JWT ilə login edir
@@ -42,37 +39,21 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         if (!ModelState.IsValid)
-        {
             return BadRequest(new BaseResponse<object>
             {
                 Success = false,
                 Message = "Username və Password tələb olunur"
             });
-        }
 
         try
         {
             var tokens = await _authService.LoginAsync(request.Username, request.Password);
 
-            return Ok(new BaseResponse<TokenResponse>
-            {
-                Success = true,
-                Message = "Login uğurlu oldu",
-                Data = new TokenResponse
-                {
-                    AccessToken = tokens.AccessToken,
-                    RefreshToken = tokens.RefreshToken,
-                    Expiration = tokens.Expiration
-                }
-            });
+            return Ok(SuccessResponse(tokens, "Login uğurlu oldu"));
         }
         catch (Exception ex)
         {
-            return Unauthorized(new BaseResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return Unauthorized(FailResponse(ex.Message));
         }
     }
 
@@ -86,37 +67,26 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
     {
         if (!ModelState.IsValid)
-        {
-            return BadRequest(new BaseResponse<object>
-            {
-                Success = false,
-                Message = "RefreshToken tələb olunur"
-            });
-        }
+            return BadRequest(FailResponse("RefreshToken tələb olunur"));
 
         try
         {
             var tokens = await _authService.RefreshTokenAsync(request.RefreshToken);
-
-            return Ok(new BaseResponse<TokenResponse>
-            {
-                Success = true,
-                Message = "Token yeniləndi",
-                Data = new TokenResponse
-                {
-                    AccessToken = tokens.AccessToken,
-                    RefreshToken = tokens.RefreshToken,
-                    Expiration = tokens.Expiration
-                }
-            });
+            return Ok(SuccessResponse(tokens, "Token yeniləndi"));
         }
         catch (Exception ex)
         {
-            return Unauthorized(new BaseResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return Unauthorized(FailResponse(ex.Message));
         }
     }
+
+    #region Helper Methods
+
+    private static BaseResponse<TokenResponse> SuccessResponse(TokenResponse data, string message) =>
+        new() { Success = true, Message = message, Data = data };
+
+    private static BaseResponse<object> FailResponse(string message) =>
+        new() { Success = false, Message = message };
+
+    #endregion
 }

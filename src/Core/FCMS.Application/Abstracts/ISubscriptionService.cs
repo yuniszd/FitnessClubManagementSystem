@@ -16,4 +16,12 @@ public interface ISubscriptionService
 
     // ------------------- Renew Subscription -------------------
     Task RenewSubscriptionAsync(Guid subscriptionId, decimal amountPaid, int? daysToAdd = null);
+
+    // ------------------- Paging & Search -------------------
+    Task<(IEnumerable<SubscriptionDto> Subscriptions, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize);
+    Task<(IEnumerable<SubscriptionDto> Subscriptions, int TotalCount)> SearchPagedAsync(
+        string? memberName,
+        bool? isActive,
+        int pageNumber,
+        int pageSize);
 }

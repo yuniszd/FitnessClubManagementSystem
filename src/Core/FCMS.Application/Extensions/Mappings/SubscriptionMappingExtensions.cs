@@ -8,15 +8,16 @@ public static class SubscriptionMappingExtensions
     // 🔹 Entity → DTO
     public static SubscriptionDto ToDto(this Subscription subscription)
     {
-        if (subscription == null) return null!;
+        if (subscription == null)
+            throw new ArgumentNullException(nameof(subscription));
 
         return new SubscriptionDto
         {
             Id = subscription.Id,
             MemberId = subscription.MemberId,
-            MemberName = subscription.Member?.FullName ?? string.Empty,  // navigation property
+            MemberName = subscription.Member?.FullName ?? string.Empty,
             SubscriptionPlanId = subscription.SubscriptionPlanId,
-            PlanName = subscription.SubscriptionPlan?.Name ?? string.Empty,  // navigation property
+            PlanName = subscription.SubscriptionPlan?.Name ?? string.Empty,
             StartDate = subscription.StartDate,
             EndDate = subscription.EndDate,
             AllowedVisits = subscription.AllowedVisits,
@@ -26,16 +27,17 @@ public static class SubscriptionMappingExtensions
     }
 
     // 🔹 Create DTO → Entity
-    public static Subscription ToEntity(this SubscriptionCreateDto dto)
+    public static Subscription ToEntity(this SubscriptionCreateDto dto, int? defaultDurationMonths = 1)
     {
-        if (dto == null) return null!;
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
 
         return new Subscription
         {
             MemberId = dto.MemberId,
             SubscriptionPlanId = dto.SubscriptionPlanId,
             StartDate = dto.StartDate,
-            EndDate = dto.StartDate.AddMonths(1), // default 1 aylıq subscription, lazım olsa dəyiş
+            EndDate = dto.StartDate.AddMonths(defaultDurationMonths ?? 1),
             AllowedVisits = dto.AllowedVisits,
             UsedVisits = 0
         };
@@ -44,11 +46,13 @@ public static class SubscriptionMappingExtensions
     // 🔹 Update DTO → Entity
     public static void UpdateFromDto(this Subscription subscription, SubscriptionUpdateDto dto)
     {
-        if (subscription == null || dto == null) return;
+        if (subscription == null)
+            throw new ArgumentNullException(nameof(subscription));
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
 
         subscription.SubscriptionPlanId = dto.SubscriptionPlanId;
         subscription.EndDate = dto.EndDate;
         subscription.AllowedVisits = dto.AllowedVisits;
-        // UsedVisits dəyişmir, yalnız admin update edə bilər
     }
 }

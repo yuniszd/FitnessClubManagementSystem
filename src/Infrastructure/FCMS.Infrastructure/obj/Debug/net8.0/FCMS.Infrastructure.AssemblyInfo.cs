@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FCMS.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b72e3844148d3df8c03f672dbed15f2598144c28")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5bb94d48ea008004f301c928da0c9daaeb113e66")]
 [assembly: System.Reflection.AssemblyProductAttribute("FCMS.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FCMS.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

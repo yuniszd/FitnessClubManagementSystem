@@ -1,4 +1,9 @@
 ﻿namespace FCMS.Application.DTOs.MemberDTOs;
 
 
-public record UpdateMemberDto(string FullName, string? PhoneNumber, string? Email);
+public record UpdateMemberDto(
+    Guid Id,
+    string FullName,
+    string? PhoneNumber,
+    string? Email
+);

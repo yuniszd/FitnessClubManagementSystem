@@ -8,6 +8,7 @@ public class Member : BaseEntity
     public string? PhoneNumber { get; set; }  // optional
     public string? Email { get; set; }        // optional
     public DateTime JoinDate { get; set; } = DateTime.UtcNow;
+    public bool IsDeleted { get; set; } = false;  // Soft delete flag
 
     public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
     public ICollection<CheckInLog> CheckInLogs { get; set; } = new List<CheckInLog>();
