@@ -47,7 +47,6 @@ public class SubscriptionPlanService : ISubscriptionPlanService
 
     public async Task<SubscriptionPlanDto> CreateAsync(SubscriptionPlanCreateDto dto)
     {
-        // ✅ Validation
         if (dto == null)
             throw new ValidationException(new[] { "SubscriptionPlanCreateDto cannot be null" });
 

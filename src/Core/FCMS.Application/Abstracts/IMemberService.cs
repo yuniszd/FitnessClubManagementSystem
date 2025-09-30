@@ -5,12 +5,12 @@ namespace FCMS.Application.Abstracts;
 
 public interface IMemberService
 {
-    Task<Member> AddMemberAsync(CreateMemberDto dto);   // Yeni üzv əlavə et
-    Task UpdateMemberAsync(UpdateMemberDto dto);        // Üzv məlumatlarını yenilə
-    Task DeleteMemberAsync(Guid id);                   // Üzvü sil
-    Task<Member?> GetByIdAsync(Guid id);              // Id üzrə üzv tap
-    Task<IEnumerable<Member>> GetAllAsync();          // Bütün üzvləri gətir
-    Task<Member?> GetByCardAsync(string cardNumber);  // CardNumber üzrə üzv tap
+    Task<Member> AddMemberAsync(CreateMemberDto dto);  
+    Task UpdateMemberAsync(UpdateMemberDto dto);        
+    Task DeleteMemberAsync(Guid id);              
+    Task<Member?> GetByIdAsync(Guid id);              
+    Task<IEnumerable<Member>> GetAllAsync();         
+    Task<Member?> GetByCardAsync(string cardNumber);  
     Task<bool> ValidateQrAsync(string qrCode);
 
     Task<(IEnumerable<Member> Members, int TotalCount)> GetPagedAsync(

@@ -7,7 +7,7 @@ namespace FCMS.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin,Reception")] // Role-based access
+[Authorize(Roles = "Admin,Reception")] 
 public class QrCodeController : ControllerBase
 {
     private readonly IQrCodeService _qrCodeService;
@@ -19,9 +19,6 @@ public class QrCodeController : ControllerBase
         _logger = logger;
     }
 
-    /// <summary>
-    /// Verilmiş content üçün QR kod yaradır
-    /// </summary>
     [HttpGet]
     [Produces("image/png")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -41,8 +38,6 @@ public class QrCodeController : ControllerBase
         try
         {
             var qrBytes = _qrCodeService.GenerateQrCode(content);
-
-            // Success response file ilə birlikdə göndərilir
             return File(qrBytes, "image/png");
         }
         catch (Exception ex)

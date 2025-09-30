@@ -23,7 +23,6 @@ public class MemberController : ControllerBase
         _logger = logger;
     }
 
-    // 🔹 GET: api/member?pageNumber=1&pageSize=20
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
     {
@@ -59,7 +58,6 @@ public class MemberController : ControllerBase
         }
     }
 
-    // 🔹 GET: api/member/search?fullName=&cardNumber=&isActive=&pageNumber=1&pageSize=20
     [HttpGet("search")]
     public async Task<IActionResult> Search(
         [FromQuery] string? fullName,
@@ -110,7 +108,6 @@ public class MemberController : ControllerBase
         }
     }
 
-    // 🔹 GET: api/member/{id}
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -138,7 +135,6 @@ public class MemberController : ControllerBase
         }
     }
 
-    // 🔹 POST: api/member
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateMemberDto dto)
     {

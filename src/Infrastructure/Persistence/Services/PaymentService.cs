@@ -16,7 +16,6 @@ namespace FCMS.Persistence.Services
             _context = context;
         }
 
-        // Yeni ödəniş yaratmaq
         public PaymentDto CreatePayment(PaymentCreateDto dto)
         {
             if (dto == null)
@@ -37,7 +36,6 @@ namespace FCMS.Persistence.Services
             return payment.ToDto();
         }
 
-        // ID ilə ödənişi götürmək
         public PaymentDto GetPaymentById(Guid id)
         {
             var payment = _context.Payments
@@ -50,7 +48,6 @@ namespace FCMS.Persistence.Services
             return payment.ToDto();
         }
 
-        // Bütün ödənişləri gətirmək
         public IEnumerable<PaymentDto> GetAllPayments()
         {
             return _context.Payments
@@ -59,7 +56,6 @@ namespace FCMS.Persistence.Services
                            .ToList();
         }
 
-        // Ödənişi yeniləmək
         public PaymentDto UpdatePayment(Guid id, PaymentDto dto)
         {
             if (dto == null)
@@ -83,7 +79,6 @@ namespace FCMS.Persistence.Services
             return payment.ToDto();
         }
 
-        // Ödənişi silmək
         public void DeletePayment(Guid id)
         {
             var payment = _context.Payments.FirstOrDefault(p => p.Id == id);

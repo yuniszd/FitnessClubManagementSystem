@@ -34,11 +34,9 @@ public class JwtTokenService : IJwtTokenService
 
         try
         {
-            // 🔹 Get roles
             var roles = await _userManager.GetRolesAsync(user);
             var normalizedRoles = roles.Select(r => r.ToUpperInvariant()).ToList();
 
-            // 🔹 Build claims
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
@@ -48,7 +46,6 @@ public class JwtTokenService : IJwtTokenService
             claims.AddRange(normalizedRoles.Select(r => new Claim(ClaimTypes.Role, r)));
             claims.Add(new Claim("roles", string.Join(",", normalizedRoles)));
 
-            // 🔹 Create access token
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var accessTokenExpiration = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes);
@@ -63,10 +60,8 @@ public class JwtTokenService : IJwtTokenService
 
             var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
 
-            // 🔹 Create refresh token
             var refreshToken = GenerateRefreshToken(out DateTime refreshTokenExpiration);
 
-            // 🔹 Save refresh token to user safely
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = refreshTokenExpiration;
 

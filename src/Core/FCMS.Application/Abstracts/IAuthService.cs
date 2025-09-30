@@ -1,5 +1,4 @@
-﻿// 📂 FCMS.Application/Abstracts/IAuthService.cs
-
+﻿
 using FCMS.Application.Responses;
 
 namespace FCMS.Application.Abstracts;

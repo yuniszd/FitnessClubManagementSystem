@@ -18,7 +18,6 @@ public class ReportService : IReportService
         _logger = logger;
     }
 
-    // ------------------ Admin Report ------------------
     public async Task<ReportDto> GetAdminReportAsync()
     {
         try
@@ -67,7 +66,6 @@ public class ReportService : IReportService
         }
     }
 
-    // ------------------ Reception Report ------------------
     public async Task<ReportDto> GetReceptionReportAsync()
     {
         try
@@ -101,7 +99,6 @@ public class ReportService : IReportService
         }
     }
 
-    // ------------------ Quick Stats ------------------
     public async Task<QuickStatsDto> GetQuickStatsAsync(QuickStatsRequest? request = null)
     {
         try

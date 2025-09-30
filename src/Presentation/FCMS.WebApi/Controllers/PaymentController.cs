@@ -9,7 +9,7 @@ namespace FCMS.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin,Reception")] // Role-based access
+[Authorize(Roles = "Admin,Reception")] 
 public class PaymentController : ControllerBase
 {
     private readonly IGenericRepository<Payment> _paymentRepo;

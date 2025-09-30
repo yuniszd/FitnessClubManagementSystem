@@ -21,7 +21,7 @@ public class ReportController : ControllerBase
 
     [HttpGet("admin")]
     [Authorize(Roles = "Admin")]
-    [ProducesResponseType(typeof(BaseResponse<object>), 200)]
+    [ProducesResponseType(typeof(BaseResponse<ReportDto>), 200)]
     [ProducesResponseType(typeof(BaseResponse<object>), 500)]
     public async Task<IActionResult> GetAdminReport()
     {
@@ -55,7 +55,6 @@ public class ReportController : ControllerBase
         }
     }
 
-    // ---------------- Quick Stats ----------------
     [HttpGet("quick-stats")]
     [Authorize(Roles = "Admin,Reception")]
     [ProducesResponseType(typeof(BaseResponse<QuickStatsDto>), 200)]

@@ -28,8 +28,6 @@ public class SubscriptionService : ISubscriptionService
         _subscriptionPlanRepo = subscriptionPlanRepo;
         _rabbitMqPublisher = rabbitMqPublisher;
     }
-
-    // ------------------- CRUD -------------------
     public async Task<SubscriptionDto> GetByIdAsync(Guid id)
     {
         var subscription = await _subscriptionRepo.GetByIdAsync(id)
@@ -125,7 +123,6 @@ public class SubscriptionService : ISubscriptionService
         return true;
     }
 
-    // ------------------- Increment Visits -------------------
     public async Task<bool> IncrementVisitAsync(Guid id)
     {
         var subscription = await _subscriptionRepo.GetByIdAsync(id)
@@ -137,7 +134,6 @@ public class SubscriptionService : ISubscriptionService
         return true;
     }
 
-    // ------------------- Renew Subscription -------------------
     public async Task RenewSubscriptionAsync(Guid subscriptionId, decimal amountPaid, int? daysToAdd = null)
     {
         var subscription = await _subscriptionRepo.GetByIdAsync(subscriptionId)
@@ -183,7 +179,6 @@ public class SubscriptionService : ISubscriptionService
         await _rabbitMqPublisher.PublishAsync("subscription_renewed_queue", json);
     }
 
-    // ------------------- Paging & Search -------------------
     public async Task<(IEnumerable<SubscriptionDto> Subscriptions, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize)
     {
         var query = _subscriptionRepo.GetQueryable();

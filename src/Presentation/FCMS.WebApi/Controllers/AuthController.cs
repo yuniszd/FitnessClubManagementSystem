@@ -29,9 +29,6 @@ public class AuthController : ControllerBase
 
     #endregion
 
-    /// <summary>
-    /// Admin / Reception istifadəçisini JWT ilə login edir
-    /// </summary>
     [HttpPost("login")]
     [ProducesResponseType(typeof(BaseResponse<TokenResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
@@ -57,9 +54,6 @@ public class AuthController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Refresh token ilə yeni JWT access token və refresh token yaradır
-    /// </summary>
     [HttpPost("refresh-token")]
     [ProducesResponseType(typeof(BaseResponse<TokenResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]

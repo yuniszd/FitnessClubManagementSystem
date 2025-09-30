@@ -4,8 +4,8 @@ namespace FCMS.Application.Abstracts;
 
 public interface IReportService
 {
-    Task<ReportDto> GetAdminReportAsync();       // Admin üçün bütün statistikalar
-    Task<ReportDto> GetReceptionReportAsync();   // Reception üçün sadələşdirilmiş
+    Task<ReportDto> GetAdminReportAsync();       
+    Task<ReportDto> GetReceptionReportAsync();  
     Task<QuickStatsDto> GetQuickStatsAsync(QuickStatsRequest request);
 
 }

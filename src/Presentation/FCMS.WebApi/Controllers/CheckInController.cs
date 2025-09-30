@@ -10,7 +10,7 @@ namespace FCMS.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Reception")] // Reception rolu üçün məhdudlaşdırıldı
+[Authorize(Roles = "Reception")] 
 public class CheckInController : ControllerBase
 {
     private readonly ICheckInService _checkInService;
@@ -28,9 +28,6 @@ public class CheckInController : ControllerBase
 
     #endregion
 
-    /// <summary>
-    /// Üzv check-in edir
-    /// </summary>
     [HttpPost("checkin")]
     [ProducesResponseType(typeof(BaseResponse<CheckInLogDto>), 200)]
     [ProducesResponseType(typeof(BaseResponse<object>), 400)]
@@ -51,9 +48,6 @@ public class CheckInController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Üzv check-out edir
-    /// </summary>
     [HttpPost("checkout/{logId:guid}")]
     [ProducesResponseType(typeof(BaseResponse<CheckInLogDto>), 200)]
     [ProducesResponseType(typeof(BaseResponse<object>), 400)]
@@ -71,9 +65,6 @@ public class CheckInController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Üzvün check-in / check-out loglarını gətirir
-    /// </summary>
     [HttpGet("member/{memberId:guid}")]
     [ProducesResponseType(typeof(BaseResponse<IEnumerable<CheckInLogDto>>), 200)]
     [ProducesResponseType(typeof(BaseResponse<object>), 400)]
