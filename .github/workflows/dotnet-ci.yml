@@ -20,10 +20,15 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Start Infrastructure (SQL & RabbitMQ)
-        run: docker-compose up -d
+        run: docker compose up -d fcms-sql rabbitmq
 
-      - name: Restore Dependencies
-        run: dotnet restore
+      - name: Wait for Infrastructure to be ready
+        run: sleep 20s
+
+      - name: Clean and Restore
+        run: |
+          dotnet clean
+          dotnet restore
 
       - name: Build Solution
         run: dotnet build --no-restore --configuration Release
@@ -33,4 +38,4 @@ jobs:
 
       - name: Stop Infrastructure
         if: always()
-        run: docker-compose down
+        run: docker compose down
