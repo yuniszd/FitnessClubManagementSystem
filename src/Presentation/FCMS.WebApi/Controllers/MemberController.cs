@@ -1,11 +1,11 @@
 ﻿using FCMS.Application.Abstracts;
 using FCMS.Application.DTOs.MemberDTOs;
 using FCMS.Application.DTOs.SubscriptionDTOs;
+using FCMS.Application.Extensions.Exceptions;
 using FCMS.Application.Responses;
 using FCMS.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
 
 namespace FCMS.API.Controllers;
 
@@ -28,14 +28,9 @@ public class MemberController : ControllerBase
     {
         try
         {
-            var members = await _memberService.GetAllAsync();
-            var totalCount = members.Count();
+            var (members, totalCount) = await _memberService.GetPagedAsync(pageNumber, pageSize);
 
-            var dtos = members
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .Select(MapToMemberDto)
-                .ToList();
+            var dtos = members.Select(MapToMemberDto).ToList();
 
             return Ok(new PagedResponse<MemberDto>
             {
@@ -68,24 +63,9 @@ public class MemberController : ControllerBase
     {
         try
         {
-            var members = await _memberService.GetAllAsync();
+            var (members, totalCount) = await _memberService.SearchPagedAsync(fullName, cardNumber, isActive, pageNumber, pageSize);
 
-            if (!string.IsNullOrWhiteSpace(fullName))
-                members = members.Where(m => m.FullName.Contains(fullName, StringComparison.OrdinalIgnoreCase)).ToList();
-
-            if (!string.IsNullOrWhiteSpace(cardNumber))
-                members = members.Where(m => m.CardNumber.Contains(cardNumber)).ToList();
-
-            if (isActive.HasValue)
-                members = members.Where(m => m.Subscriptions.Any(s => s.IsActive == isActive.Value)).ToList();
-
-            var totalCount = members.Count();
-
-            var dtos = members
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .Select(MapToMemberDto)
-                .ToList();
+            var dtos = members.Select(MapToMemberDto).ToList();
 
             return Ok(new PagedResponse<MemberDto>
             {
@@ -166,6 +146,37 @@ public class MemberController : ControllerBase
             {
                 Success = false,
                 Message = "Member yaradılarkən xəta baş verdi"
+            });
+        }
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        try
+        {
+            await _memberService.DeleteMemberAsync(id);
+            return Ok(new BaseResponse<object>
+            {
+                Success = true,
+                Message = "Member silindi"
+            });
+        }
+        catch (NotFoundException)
+        {
+            return NotFound(new BaseResponse<object>
+            {
+                Success = false,
+                Message = "Member tapılmadı"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Delete zamanı xəta baş verdi");
+            return StatusCode(500, new BaseResponse<object>
+            {
+                Success = false,
+                Message = "Member silinərkən xəta baş verdi"
             });
         }
     }

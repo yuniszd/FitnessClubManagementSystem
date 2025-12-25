@@ -29,7 +29,7 @@ public class ReceptionController : ControllerBase
     {
         if (dto == null || string.IsNullOrWhiteSpace(dto.QrCode))
             return BadRequest(FailResponse("QR kod boş ola bilməz."));
-
+        
         try
         {
             var isValid = await _memberService.ValidateQrAsync(dto.QrCode);

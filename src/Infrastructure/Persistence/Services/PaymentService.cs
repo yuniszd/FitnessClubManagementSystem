@@ -35,7 +35,7 @@ namespace FCMS.Persistence.Services
 
             return payment.ToDto();
         }
-
+        
         public PaymentDto GetPaymentById(Guid id)
         {
             var payment = _context.Payments

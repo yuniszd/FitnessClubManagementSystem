@@ -25,7 +25,6 @@ public class SubscriptionReminderJob
     {
         var now = DateTime.UtcNow;
 
-        // Member və SubscriptionPlan ilə birlikdə yükləyirik
         var subscriptions = await _subscriptionRepo
             .GetQueryable()
             .Include(s => s.Member)
@@ -40,14 +39,13 @@ public class SubscriptionReminderJob
 
             bool isLastVisits = remainingVisits.HasValue &&
                                 remainingVisits.Value <= 3 &&
-                                remainingVisits.Value > 0;
+                                remainingVisits.Value > 0; 
 
             var daysLeft = (sub.EndDate - now).TotalDays;
             bool isLastDay = daysLeft <= 1 && daysLeft >= 0;
 
             if (isLastVisits || isLastDay)
             {
-                // Əgər Member və ya Plan boşdursa, skip et
                 if (sub.Member == null || sub.SubscriptionPlan == null)
                     continue;
 

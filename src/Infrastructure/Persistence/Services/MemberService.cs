@@ -33,7 +33,7 @@ public class MemberService : IMemberService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    #region Public Methods
+    #region Member CRUD
 
     public async Task<Member> AddMemberAsync(CreateMemberDto dto)
     {
@@ -75,13 +75,25 @@ public class MemberService : IMemberService
 
     public async Task DeleteMemberAsync(Guid id)
     {
-        var member = await GetByIdOrNullAsync(id)
+        var member = await _memberRepo.GetByIdAsync(id)
                      ?? throw new NotFoundException("Member", id);
 
         _memberRepo.Remove(member);
         await _memberRepo.SaveChangesAsync();
 
         _logger.LogInformation("Member deleted: {MemberId}", id);
+    }
+
+    public async Task<Member?> GetByIdAsync(Guid id) => await _memberRepo.GetByIdAsync(id);
+
+    public async Task<IEnumerable<Member>> GetAllAsync() => await _memberRepo.GetAllAsync();
+
+    public async Task<Member?> GetByCardAsync(string cardNumber)
+    {
+        if (string.IsNullOrWhiteSpace(cardNumber))
+            throw new ValidationException("cardNumber", "Card number cannot be empty");
+
+        return (await _memberRepo.FindAsync(m => m.CardNumber == cardNumber)).FirstOrDefault();
     }
 
     public async Task<bool> ValidateQrAsync(string qrCode)
@@ -99,22 +111,10 @@ public class MemberService : IMemberService
         return isValid;
     }
 
-    public async Task<Member?> GetByIdAsync(Guid id) => await GetByIdOrNullAsync(id);
-    public async Task<IEnumerable<Member>> GetAllAsync() => await _memberRepo.GetAllAsync();
-
-    public async Task<Member?> GetByCardAsync(string cardNumber)
-    {
-        if (string.IsNullOrWhiteSpace(cardNumber))
-            throw new ValidationException("cardNumber", "Card number cannot be empty");
-
-        return (await _memberRepo.FindAsync(m => m.CardNumber == cardNumber)).FirstOrDefault();
-    }
-
     public async Task<(IEnumerable<Member> Members, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize)
     {
         var query = _memberRepo.GetQueryable();
-        var totalCount = await query.CountAsync();
-
+        int totalCount = await query.CountAsync();
         var members = await query
             .OrderBy(m => m.FullName)
             .Skip((pageNumber - 1) * pageSize)
@@ -139,8 +139,7 @@ public class MemberService : IMemberService
         if (isActive.HasValue)
             query = query.Where(m => m.Subscriptions.Any(s => s.EndDate >= DateTime.UtcNow) == isActive.Value);
 
-        var totalCount = await query.CountAsync();
-
+        int totalCount = await query.CountAsync();
         var members = await query
             .OrderBy(m => m.FullName)
             .Skip((pageNumber - 1) * pageSize)
@@ -224,8 +223,6 @@ public class MemberService : IMemberService
             _logger.LogError(ex, "Failed to generate QR or publish event for member {MemberId}", member.Id);
         }
     }
-
-    private async Task<Member?> GetByIdOrNullAsync(Guid id) => await _memberRepo.GetByIdAsync(id);
 
     #endregion
 }

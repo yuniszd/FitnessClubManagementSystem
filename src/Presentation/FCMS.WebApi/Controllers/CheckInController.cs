@@ -39,14 +39,20 @@ public class CheckInController : ControllerBase
         try
         {
             var log = await _checkInService.CheckInAsync(request.CardNumber, request.DeviceId);
-            return Ok(SuccessResponse(log, "Üzv uğurla daxil edildi."));
+
+            var message = log.CheckOutTime != null
+                ? "Üzv uğurla çıxış etdi."
+                : "Üzv uğurla daxil edildi.";
+
+            return Ok(SuccessResponse(log, message));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "CheckIn zamanı xəta baş verdi. CardNumber: {CardNumber}", request.CardNumber);
+            _logger.LogError(ex, "CheckIn/CheckOut zamanı xəta baş verdi. CardNumber: {CardNumber}", request.CardNumber);
             return BadRequest(FailResponse(ex.Message));
         }
     }
+
 
     [HttpPost("checkout/{logId:guid}")]
     [ProducesResponseType(typeof(BaseResponse<CheckInLogDto>), 200)]

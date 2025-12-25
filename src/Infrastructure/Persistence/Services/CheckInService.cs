@@ -37,7 +37,7 @@ public class CheckInService : ICheckInService
         var member = await _context.Members
             .Include(m => m.Subscriptions)
             .Include(m => m.CheckInLogs)
-            .FirstOrDefaultAsync(m => m.CardNumber == cardNumber, cancellationToken);
+            .FirstOrDefaultAsync(m => m.CardNumber == cardNumber && !m.IsDeleted, cancellationToken);
 
         if (member == null)
         {
@@ -55,37 +55,32 @@ public class CheckInService : ICheckInService
             throw new BusinessRuleException("Üzvün aktiv abonementi yoxdur");
         }
 
-        if (activeSubscription.AllowedVisits.HasValue && activeSubscription.UsedVisits >= activeSubscription.AllowedVisits.Value)
-        {
-            _logger.LogWarning("Check-in failed: allowed visits exceeded for member {MemberId}", member.Id);
-            throw new BusinessRuleException("Bu abonement üçün icazə verilmiş ziyarət sayı bitib");
-        }
-
-        var recentLog = member.CheckInLogs
-            .OrderByDescending(c => c.CheckInTime)
+        var lastLog = member.CheckInLogs
+            .OrderByDescending(l => l.CheckInTime)
             .FirstOrDefault();
 
-        if (recentLog != null && (DateTime.UtcNow - recentLog.CheckInTime).TotalMinutes < 1)
+        if (lastLog != null && lastLog.CheckOutTime == null)
         {
-            _logger.LogWarning("Check-in failed: member {MemberId} already checked in recently", member.Id);
-            throw new BusinessRuleException("Bu üzv artıq çox tez daxil oldu");
+            lastLog.CheckOutTime = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Member {MemberId} automatically checked out previous session", member.Id);
+
+            return MapToDto(lastLog);
         }
 
-        if (recentLog != null && !string.IsNullOrWhiteSpace(recentLog.DeviceId) && recentLog.DeviceId != deviceId)
-        {
-            _logger.LogWarning("Check-in failed: member {MemberId} attempted check-in from a different device", member.Id);
-            throw new ForbiddenException("Bu QR kod başqa cihazdan istifadə edilib!");
-        }
-
-        var log = new CheckInLog
+        var newLog = new CheckInLog
         {
             MemberId = member.Id,
             CheckInTime = DateTime.UtcNow,
             DeviceId = deviceId
         };
 
-        await _context.CheckInLogs.AddAsync(log, cancellationToken);
-        activeSubscription.UsedVisits++;
+        await _context.CheckInLogs.AddAsync(newLog, cancellationToken);
+
+        if (activeSubscription.AllowedVisits.HasValue)
+            activeSubscription.UsedVisits++;
+
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Member {MemberId} checked in successfully", member.Id);
@@ -96,7 +91,7 @@ public class CheckInService : ICheckInService
             {
                 MemberId = member.Id,
                 MemberName = member.FullName,
-                CheckInTime = log.CheckInTime,
+                CheckInTime = newLog.CheckInTime,
                 DeviceId = deviceId
             };
             await _rabbitMqPublisher.PublishAsync("checkin_queue", JsonSerializer.Serialize(eventMessage));
@@ -106,18 +101,14 @@ public class CheckInService : ICheckInService
             _logger.LogError(ex, "Failed to publish check-in event for member {MemberId}", member.Id);
         }
 
-        return new CheckInLogDto
-        {
-            Id = log.Id,
-            MemberId = log.MemberId,
-            CheckInTime = log.CheckInTime,
-            CheckOutTime = log.CheckOutTime
-        };
+        return MapToDto(newLog);
     }
 
     public async Task<CheckInLogDto> CheckOutAsync(Guid logId, CancellationToken cancellationToken = default)
     {
-        var log = await _context.CheckInLogs.FindAsync(new object[] { logId }, cancellationToken);
+        var log = await _context.CheckInLogs
+            .Include(l => l.Member)
+            .FirstOrDefaultAsync(l => l.Id == logId, cancellationToken);
 
         if (log == null)
         {
@@ -136,13 +127,7 @@ public class CheckInService : ICheckInService
 
         _logger.LogInformation("Member {MemberId} checked out successfully", log.MemberId);
 
-        return new CheckInLogDto
-        {
-            Id = log.Id,
-            MemberId = log.MemberId,
-            CheckInTime = log.CheckInTime,
-            CheckOutTime = log.CheckOutTime
-        };
+        return MapToDto(log);
     }
 
     public async Task<IEnumerable<CheckInLogDto>> GetLogsByMemberAsync(Guid memberId, CancellationToken cancellationToken = default)
@@ -152,12 +137,20 @@ public class CheckInService : ICheckInService
             .OrderByDescending(l => l.CheckInTime)
             .ToListAsync(cancellationToken);
 
-        return logs.Select(log => new CheckInLogDto
+        return logs.Select(MapToDto);
+    }
+
+    #region Private Helpers
+    private static CheckInLogDto MapToDto(CheckInLog log)
+    {
+        return new CheckInLogDto
         {
             Id = log.Id,
             MemberId = log.MemberId,
             CheckInTime = log.CheckInTime,
-            CheckOutTime = log.CheckOutTime
-        });
+            CheckOutTime = log.CheckOutTime,
+            DeviceId = log.DeviceId
+        };
     }
+    #endregion
 }

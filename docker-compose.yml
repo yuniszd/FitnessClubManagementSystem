@@ -1,39 +1,38 @@
-version: '3.9'
+name: .NET Microservices CI
 
-services:
-  fcms-api:
-    build: ./src/FCMS.Api
-    container_name: fcms-api
-    depends_on:
-      - fcms-sql
-      - rabbitmq
-    environment:
-      - DOTNET_ENVIRONMENT=Docker
-    ports:
-      - "5000:80"
-    networks:
-      - fcms-net
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
 
-  fcms-sql:
-    image: mcr.microsoft.com/mssql/server:2019-latest
-    container_name: fcms-sql
-    environment:
-      SA_PASSWORD: "YourStrong!Passw0rd"
-      ACCEPT_EULA: "Y"
-    ports:
-      - "1433:1433"
-    networks:
-      - fcms-net
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    networks:
-      - fcms-net
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-networks:
-  fcms-net:
-    driver: bridge
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # docker-compose -> docker compose
+      - name: Start Infrastructure (SQL & RabbitMQ)
+        run: docker compose up -d fcms-sql rabbitmq
+
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      - name: Build Solution
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run xUnit Tests
+        run: dotnet test --no-build --configuration Release --verbosity normal
+
+      # docker-compose -> docker compose
+      - name: Stop Infrastructure
+        if: always()
+        run: docker compose down
