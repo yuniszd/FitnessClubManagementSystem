@@ -31,12 +31,12 @@ jobs:
           dotnet restore
 
       - name: Build Solution
-        # Using comma-separated values without spaces is the most stable way for MSBuild
-        run: dotnet build --no-restore --configuration Release /p:NoWarn="CS8618,CS8601,CS8602,CS8603,CS8604,CS8619,CS8620,CS8625,CS8600,CS8632"
+        # We pass NoWarn as a single property without quotes or spaces to avoid MSB1006
+        run: dotnet build --no-restore --configuration Release /p:NoWarn=CS8618%2CCS8601%2CCS8602%2CCS8603%2CCS8604%2CCS8619%2CCS8620%2CCS8625%2CCS8600%2CCS8632
 
       - name: Run xUnit Tests
-        # Apply the same logic for tests and continue on failure
-        run: dotnet test --no-build --configuration Release --verbosity normal /p:NoWarn="CS8618,CS8601,CS8602,CS8603,CS8604,CS8619,CS8620,CS8625,CS8600,CS8632" || true
+        # Same encoding for tests to ensure stability
+        run: dotnet test --no-build --configuration Release --verbosity normal /p:NoWarn=CS8618%2CCS8601%2CCS8602%2CCS8603%2CCS8604%2CCS8619%2CCS8620%2CCS8625%2CCS8600%2CCS8632 || true
 
       - name: Stop Infrastructure
         if: always()
