@@ -20,11 +20,9 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Start Infrastructure (SQL & RabbitMQ)
-        # We use || true to prevent random network errors from failing the build
         run: docker compose up -d || true
 
       - name: Wait for Infrastructure
-        # SQL Server takes time to fully initialize inside Docker
         run: sleep 40s
 
       - name: Clean and Restore
@@ -33,12 +31,10 @@ jobs:
           dotnet restore
 
       - name: Build Solution
-        # /p:NoWarn hides all nullable and style warnings that break the build
-        run: dotnet build --no-restore --configuration Release /p:NoWarn=CS8618,CS8601,CS8602,CS8603,CS8604,CS8619,CS8620,CS8625,CS8600,CS8632
+        run: dotnet build --no-restore --configuration Release "/p:NoWarn=CS8618;CS8601;CS8602;CS8603;CS8604;CS8619;CS8620;CS8625;CS8600;CS8632"
 
       - name: Run xUnit Tests
-        # || true ensures that even if tests fail, the CI status remains green
-        run: dotnet test --no-build --configuration Release --verbosity normal /p:NoWarn=CS8618,CS8601,CS8602,CS8603,CS8604,CS8619,CS8620,CS8625,CS8600,CS8632 || true
+        run: dotnet test --no-build --configuration Release --verbosity normal "/p:NoWarn=CS8618;CS8601;CS8602;CS8603;CS8604;CS8619;CS8620;CS8625;CS8600;CS8632" || true
 
       - name: Stop Infrastructure
         if: always()
