@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # SQL Server Database
+  # SQL Server container
   fcms-sql:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: fcms-sql
@@ -13,29 +13,13 @@ services:
     networks:
       - fcms-net
 
-  # RabbitMQ Message Broker
+  # RabbitMQ container
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
-    networks:
-      - fcms-net
-
-  # The Web API application
-  fcms-api:
-    build:
-      context: .
-      dockerfile: src/Presentation/FCMS.WebApi/Dockerfile
-    container_name: fcms-api
-    ports:
-      - "5000:80"
-    environment:
-      - ConnectionStrings__DefaultConnection=Server=fcms-sql;Database=FCMS_Db;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;
-    depends_on:
-      - fcms-sql
-      - rabbitmq
     networks:
       - fcms-net
 
