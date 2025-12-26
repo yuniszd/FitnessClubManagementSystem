@@ -8,20 +8,20 @@ EXPOSE 443
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Bütün solution-u kopyala
+# Copy everything for building
 COPY . .
 
-# Restore Web API layihəsi
+# Restore the Web API project
 RUN dotnet restore "src/Presentation/FCMS.WebApi/FCMS.WebApi.csproj"
 
-# Build Web API layihəsi
+# Build the project in Release mode
 RUN dotnet build "src/Presentation/FCMS.WebApi/FCMS.WebApi.csproj" -c Release -o /app/build
 
-# Publish Web API layihəsi
+# Publish the application
 FROM build AS publish
 RUN dotnet publish "src/Presentation/FCMS.WebApi/FCMS.WebApi.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Final runtime image
+# Final stage: copy the published app to the runtime image
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
