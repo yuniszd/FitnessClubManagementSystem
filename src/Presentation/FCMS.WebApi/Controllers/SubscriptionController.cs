@@ -42,7 +42,9 @@ public class SubscriptionsController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(BaseResponse<IEnumerable<SubscriptionDto>>), 200)]
+    [ProducesResponseType(typeof(BaseResponse<TokenResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll()
     {
         var subscriptions = await _subscriptionService.GetAllAsync();
